@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { Api, ApiError } from '../lib/api';
 
 interface SettingsViewProps {
@@ -16,7 +17,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onShowToast
 }) => {
   const { user, logout } = useAuth();
-  const [theme, setTheme] = useState<'purple' | 'dark' | 'warm'>('purple');
+  const { theme, setTheme } = useTheme();
   const [currency, setCurrency] = useState<'MWK' | 'USD'>('MWK');
   const [language, setLanguage] = useState<'en' | 'ch'>('en');
   const [pushEnabled, setPushEnabled] = useState(true);
@@ -180,11 +181,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <div className="flex gap-3 overflow-x-auto pb-1">
           <button
             onClick={() => {
-              setTheme('purple');
-              onShowToast('Elite Purple theme active');
+              setTheme('light');
+              onShowToast('Purple Elite theme active');
             }}
             className={`p-3 rounded-2xl border flex-1 text-center transition-all ${
-              theme === 'purple' ? 'border-[#6D28D9] bg-[#EDE9FE]' : 'border-[#E5E7EB] bg-white'
+              theme === 'light' ? 'border-[#6D28D9] bg-[#EDE9FE]' : 'border-[#E5E7EB] bg-white'
             }`}
           >
             <div className="w-full h-8 bg-[#6D28D9] rounded-lg mb-2"></div>
@@ -194,27 +195,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <button
             onClick={() => {
               setTheme('dark');
-              onShowToast('Dark Obsidian theme preview set');
+              onShowToast('Pure Black theme active');
             }}
             className={`p-3 rounded-2xl border flex-1 text-center transition-all ${
               theme === 'dark' ? 'border-[#6D28D9] bg-slate-900 text-white' : 'border-[#E5E7EB] bg-white'
             }`}
           >
-            <div className="w-full h-8 bg-slate-800 rounded-lg mb-2"></div>
-            <span className="text-xs font-bold">Dark Mode</span>
-          </button>
-
-          <button
-            onClick={() => {
-              setTheme('warm');
-              onShowToast('Warm Amber theme preview set');
-            }}
-            className={`p-3 rounded-2xl border flex-1 text-center transition-all ${
-              theme === 'warm' ? 'border-[#6D28D9] bg-amber-50' : 'border-[#E5E7EB] bg-white'
-            }`}
-          >
-            <div className="w-full h-8 bg-amber-600 rounded-lg mb-2"></div>
-            <span className="text-xs font-bold text-[#111827]">Warm Heritage</span>
+            <div className="w-full h-8 bg-black border border-[#333] rounded-lg mb-2"></div>
+            <span className="text-xs font-bold">Pure Black</span>
           </button>
         </div>
       </section>

@@ -55,3 +55,403 @@ html, body, * {
 .font-serif-source { font-family: 'Source Serif 4', serif; }
 .font-plus-jakarta { font-family: 'Plus Jakarta Sans', sans-serif; }
 .font-dm-sans { font-family: 'DM Sans', sans-serif; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   PURE-BLACK DARK THEME OVERRIDES
+   Toggled by adding/removing the `dark` class on <html> (see ThemeContext).
+   Components use hardcoded Tailwind arbitrary-value hex utilities
+   (e.g. bg-[#fbf8ff]) rather than semantic dark: variants, so instead of
+   rewriting every component, each color utility is remapped here via a
+   substring attribute selector — covers every opacity variant
+   (bg-[#ccc3d7]/40, etc.) automatically.
+   ══════════════════════════════════════════════════════════════════════ */
+html.dark {
+  color-scheme: dark;
+}
+html.dark body {
+  background-color: #000000;
+  color: #f2f2f5;
+}
+
+html.dark [class*="bg-[#fbf8ff]"] { background-color: #000000 !important; }
+html.dark [class*="text-[#fbf8ff]"] { color: #000000 !important; }
+html.dark [class*="border-[#fbf8ff]"] { border-color: #000000 !important; }
+html.dark [class*="from-[#fbf8ff]"] { --tw-gradient-from: #000000 !important; }
+html.dark [class*="via-[#fbf8ff]"] { --tw-gradient-via: #000000 !important; }
+html.dark [class*="to-[#fbf8ff]"] { --tw-gradient-to: #000000 !important; }
+html.dark [class*="fill-[#fbf8ff]"] { fill: #000000 !important; }
+
+html.dark [class*="bg-[#f8f9ff]"] { background-color: #000000 !important; }
+html.dark [class*="text-[#f8f9ff]"] { color: #000000 !important; }
+html.dark [class*="border-[#f8f9ff]"] { border-color: #000000 !important; }
+html.dark [class*="from-[#f8f9ff]"] { --tw-gradient-from: #000000 !important; }
+html.dark [class*="via-[#f8f9ff]"] { --tw-gradient-via: #000000 !important; }
+html.dark [class*="to-[#f8f9ff]"] { --tw-gradient-to: #000000 !important; }
+html.dark [class*="fill-[#f8f9ff]"] { fill: #000000 !important; }
+
+html.dark [class*="bg-[#eff4ff]"] { background-color: #141414 !important; }
+html.dark [class*="text-[#eff4ff]"] { color: #141414 !important; }
+html.dark [class*="border-[#eff4ff]"] { border-color: #141414 !important; }
+html.dark [class*="from-[#eff4ff]"] { --tw-gradient-from: #141414 !important; }
+html.dark [class*="via-[#eff4ff]"] { --tw-gradient-via: #141414 !important; }
+html.dark [class*="to-[#eff4ff]"] { --tw-gradient-to: #141414 !important; }
+html.dark [class*="fill-[#eff4ff]"] { fill: #141414 !important; }
+
+html.dark [class*="bg-[#f3ebf9]"] { background-color: #161116 !important; }
+html.dark [class*="text-[#f3ebf9]"] { color: #161116 !important; }
+html.dark [class*="border-[#f3ebf9]"] { border-color: #161116 !important; }
+html.dark [class*="from-[#f3ebf9]"] { --tw-gradient-from: #161116 !important; }
+html.dark [class*="via-[#f3ebf9]"] { --tw-gradient-via: #161116 !important; }
+html.dark [class*="to-[#f3ebf9]"] { --tw-gradient-to: #161116 !important; }
+html.dark [class*="fill-[#f3ebf9]"] { fill: #161116 !important; }
+
+html.dark [class*="bg-[#f4f2fd]"] { background-color: #161116 !important; }
+html.dark [class*="text-[#f4f2fd]"] { color: #161116 !important; }
+html.dark [class*="border-[#f4f2fd]"] { border-color: #161116 !important; }
+html.dark [class*="from-[#f4f2fd]"] { --tw-gradient-from: #161116 !important; }
+html.dark [class*="via-[#f4f2fd]"] { --tw-gradient-via: #161116 !important; }
+html.dark [class*="to-[#f4f2fd]"] { --tw-gradient-to: #161116 !important; }
+html.dark [class*="fill-[#f4f2fd]"] { fill: #161116 !important; }
+
+html.dark [class*="bg-[#fef7ff]"] { background-color: #141014 !important; }
+html.dark [class*="text-[#fef7ff]"] { color: #141014 !important; }
+html.dark [class*="border-[#fef7ff]"] { border-color: #141014 !important; }
+html.dark [class*="from-[#fef7ff]"] { --tw-gradient-from: #141014 !important; }
+html.dark [class*="via-[#fef7ff]"] { --tw-gradient-via: #141014 !important; }
+html.dark [class*="to-[#fef7ff]"] { --tw-gradient-to: #141014 !important; }
+html.dark [class*="fill-[#fef7ff]"] { fill: #141014 !important; }
+
+html.dark [class*="bg-[#e8e7f1]"] { background-color: #171717 !important; }
+html.dark [class*="text-[#e8e7f1]"] { color: #171717 !important; }
+html.dark [class*="border-[#e8e7f1]"] { border-color: #171717 !important; }
+html.dark [class*="from-[#e8e7f1]"] { --tw-gradient-from: #171717 !important; }
+html.dark [class*="via-[#e8e7f1]"] { --tw-gradient-via: #171717 !important; }
+html.dark [class*="to-[#e8e7f1]"] { --tw-gradient-to: #171717 !important; }
+html.dark [class*="fill-[#e8e7f1]"] { fill: #171717 !important; }
+
+html.dark [class*="bg-[#e3e1ec]"] { background-color: #1a1a1a !important; }
+html.dark [class*="text-[#e3e1ec]"] { color: #1a1a1a !important; }
+html.dark [class*="border-[#e3e1ec]"] { border-color: #1a1a1a !important; }
+html.dark [class*="from-[#e3e1ec]"] { --tw-gradient-from: #1a1a1a !important; }
+html.dark [class*="via-[#e3e1ec]"] { --tw-gradient-via: #1a1a1a !important; }
+html.dark [class*="to-[#e3e1ec]"] { --tw-gradient-to: #1a1a1a !important; }
+html.dark [class*="fill-[#e3e1ec]"] { fill: #1a1a1a !important; }
+
+html.dark [class*="bg-[#d9e3f6]"] { background-color: #141414 !important; }
+html.dark [class*="text-[#d9e3f6]"] { color: #141414 !important; }
+html.dark [class*="border-[#d9e3f6]"] { border-color: #141414 !important; }
+html.dark [class*="from-[#d9e3f6]"] { --tw-gradient-from: #141414 !important; }
+html.dark [class*="via-[#d9e3f6]"] { --tw-gradient-via: #141414 !important; }
+html.dark [class*="to-[#d9e3f6]"] { --tw-gradient-to: #141414 !important; }
+html.dark [class*="fill-[#d9e3f6]"] { fill: #141414 !important; }
+
+html.dark [class*="bg-[#e6eeff]"] { background-color: #141414 !important; }
+html.dark [class*="text-[#e6eeff]"] { color: #141414 !important; }
+html.dark [class*="border-[#e6eeff]"] { border-color: #141414 !important; }
+html.dark [class*="from-[#e6eeff]"] { --tw-gradient-from: #141414 !important; }
+html.dark [class*="via-[#e6eeff]"] { --tw-gradient-via: #141414 !important; }
+html.dark [class*="to-[#e6eeff]"] { --tw-gradient-to: #141414 !important; }
+html.dark [class*="fill-[#e6eeff]"] { fill: #141414 !important; }
+
+html.dark [class*="bg-[#eeedf7]"] { background-color: #171717 !important; }
+html.dark [class*="text-[#eeedf7]"] { color: #171717 !important; }
+html.dark [class*="border-[#eeedf7]"] { border-color: #171717 !important; }
+html.dark [class*="from-[#eeedf7]"] { --tw-gradient-from: #171717 !important; }
+html.dark [class*="via-[#eeedf7]"] { --tw-gradient-via: #171717 !important; }
+html.dark [class*="to-[#eeedf7]"] { --tw-gradient-to: #171717 !important; }
+html.dark [class*="fill-[#eeedf7]"] { fill: #171717 !important; }
+
+html.dark [class*="bg-[#dee9fc]"] { background-color: #141414 !important; }
+html.dark [class*="text-[#dee9fc]"] { color: #141414 !important; }
+html.dark [class*="border-[#dee9fc]"] { border-color: #141414 !important; }
+html.dark [class*="from-[#dee9fc]"] { --tw-gradient-from: #141414 !important; }
+html.dark [class*="via-[#dee9fc]"] { --tw-gradient-via: #141414 !important; }
+html.dark [class*="to-[#dee9fc]"] { --tw-gradient-to: #141414 !important; }
+html.dark [class*="fill-[#dee9fc]"] { fill: #141414 !important; }
+
+html.dark [class*="bg-[#F9FAFB]"] { background-color: #131313 !important; }
+html.dark [class*="text-[#F9FAFB]"] { color: #131313 !important; }
+html.dark [class*="border-[#F9FAFB]"] { border-color: #131313 !important; }
+html.dark [class*="from-[#F9FAFB]"] { --tw-gradient-from: #131313 !important; }
+html.dark [class*="via-[#F9FAFB]"] { --tw-gradient-via: #131313 !important; }
+html.dark [class*="to-[#F9FAFB]"] { --tw-gradient-to: #131313 !important; }
+html.dark [class*="fill-[#F9FAFB]"] { fill: #131313 !important; }
+
+html.dark [class*="bg-[#faf8fc]"] { background-color: #141014 !important; }
+html.dark [class*="text-[#faf8fc]"] { color: #141014 !important; }
+html.dark [class*="border-[#faf8fc]"] { border-color: #141014 !important; }
+html.dark [class*="from-[#faf8fc]"] { --tw-gradient-from: #141014 !important; }
+html.dark [class*="via-[#faf8fc]"] { --tw-gradient-via: #141014 !important; }
+html.dark [class*="to-[#faf8fc]"] { --tw-gradient-to: #141014 !important; }
+html.dark [class*="fill-[#faf8fc]"] { fill: #141014 !important; }
+
+html.dark [class*="bg-[#f8f6fc]"] { background-color: #141014 !important; }
+html.dark [class*="text-[#f8f6fc]"] { color: #141014 !important; }
+html.dark [class*="border-[#f8f6fc]"] { border-color: #141014 !important; }
+html.dark [class*="from-[#f8f6fc]"] { --tw-gradient-from: #141014 !important; }
+html.dark [class*="via-[#f8f6fc]"] { --tw-gradient-via: #141014 !important; }
+html.dark [class*="to-[#f8f6fc]"] { --tw-gradient-to: #141014 !important; }
+html.dark [class*="fill-[#f8f6fc]"] { fill: #141014 !important; }
+
+html.dark [class*="bg-[#f8f2fc]"] { background-color: #141014 !important; }
+html.dark [class*="text-[#f8f2fc]"] { color: #141014 !important; }
+html.dark [class*="border-[#f8f2fc]"] { border-color: #141014 !important; }
+html.dark [class*="from-[#f8f2fc]"] { --tw-gradient-from: #141014 !important; }
+html.dark [class*="via-[#f8f2fc]"] { --tw-gradient-via: #141014 !important; }
+html.dark [class*="to-[#f8f2fc]"] { --tw-gradient-to: #141014 !important; }
+html.dark [class*="fill-[#f8f2fc]"] { fill: #141014 !important; }
+
+html.dark [class*="bg-[#ffffff]"] { background-color: #0d0d0d !important; }
+html.dark [class*="text-[#ffffff]"] { color: #0d0d0d !important; }
+html.dark [class*="border-[#ffffff]"] { border-color: #0d0d0d !important; }
+html.dark [class*="from-[#ffffff]"] { --tw-gradient-from: #0d0d0d !important; }
+html.dark [class*="via-[#ffffff]"] { --tw-gradient-via: #0d0d0d !important; }
+html.dark [class*="to-[#ffffff]"] { --tw-gradient-to: #0d0d0d !important; }
+html.dark [class*="fill-[#ffffff]"] { fill: #0d0d0d !important; }
+
+html.dark [class*="bg-[#1a1b22]"] { background-color: #f2f2f5 !important; }
+html.dark [class*="text-[#1a1b22]"] { color: #f2f2f5 !important; }
+html.dark [class*="border-[#1a1b22]"] { border-color: #f2f2f5 !important; }
+html.dark [class*="from-[#1a1b22]"] { --tw-gradient-from: #f2f2f5 !important; }
+html.dark [class*="via-[#1a1b22]"] { --tw-gradient-via: #f2f2f5 !important; }
+html.dark [class*="to-[#1a1b22]"] { --tw-gradient-to: #f2f2f5 !important; }
+html.dark [class*="fill-[#1a1b22]"] { fill: #f2f2f5 !important; }
+
+html.dark [class*="bg-[#1d1a24]"] { background-color: #f2f2f5 !important; }
+html.dark [class*="text-[#1d1a24]"] { color: #f2f2f5 !important; }
+html.dark [class*="border-[#1d1a24]"] { border-color: #f2f2f5 !important; }
+html.dark [class*="from-[#1d1a24]"] { --tw-gradient-from: #f2f2f5 !important; }
+html.dark [class*="via-[#1d1a24]"] { --tw-gradient-via: #f2f2f5 !important; }
+html.dark [class*="to-[#1d1a24]"] { --tw-gradient-to: #f2f2f5 !important; }
+html.dark [class*="fill-[#1d1a24]"] { fill: #f2f2f5 !important; }
+
+html.dark [class*="bg-[#121c2a]"] { background-color: #f2f2f5 !important; }
+html.dark [class*="text-[#121c2a]"] { color: #f2f2f5 !important; }
+html.dark [class*="border-[#121c2a]"] { border-color: #f2f2f5 !important; }
+html.dark [class*="from-[#121c2a]"] { --tw-gradient-from: #f2f2f5 !important; }
+html.dark [class*="via-[#121c2a]"] { --tw-gradient-via: #f2f2f5 !important; }
+html.dark [class*="to-[#121c2a]"] { --tw-gradient-to: #f2f2f5 !important; }
+html.dark [class*="fill-[#121c2a]"] { fill: #f2f2f5 !important; }
+
+html.dark [class*="bg-[#111827]"] { background-color: #f2f2f5 !important; }
+html.dark [class*="text-[#111827]"] { color: #f2f2f5 !important; }
+html.dark [class*="border-[#111827]"] { border-color: #f2f2f5 !important; }
+html.dark [class*="from-[#111827]"] { --tw-gradient-from: #f2f2f5 !important; }
+html.dark [class*="via-[#111827]"] { --tw-gradient-via: #f2f2f5 !important; }
+html.dark [class*="to-[#111827]"] { --tw-gradient-to: #f2f2f5 !important; }
+html.dark [class*="fill-[#111827]"] { fill: #f2f2f5 !important; }
+
+html.dark [class*="bg-[#4a4455]"] { background-color: #b3b0ba !important; }
+html.dark [class*="text-[#4a4455]"] { color: #b3b0ba !important; }
+html.dark [class*="border-[#4a4455]"] { border-color: #b3b0ba !important; }
+html.dark [class*="from-[#4a4455]"] { --tw-gradient-from: #b3b0ba !important; }
+html.dark [class*="via-[#4a4455]"] { --tw-gradient-via: #b3b0ba !important; }
+html.dark [class*="to-[#4a4455]"] { --tw-gradient-to: #b3b0ba !important; }
+html.dark [class*="fill-[#4a4455]"] { fill: #b3b0ba !important; }
+
+html.dark [class*="bg-[#7b7486]"] { background-color: #8c8894 !important; }
+html.dark [class*="text-[#7b7486]"] { color: #8c8894 !important; }
+html.dark [class*="border-[#7b7486]"] { border-color: #8c8894 !important; }
+html.dark [class*="from-[#7b7486]"] { --tw-gradient-from: #8c8894 !important; }
+html.dark [class*="via-[#7b7486]"] { --tw-gradient-via: #8c8894 !important; }
+html.dark [class*="to-[#7b7486]"] { --tw-gradient-to: #8c8894 !important; }
+html.dark [class*="fill-[#7b7486]"] { fill: #8c8894 !important; }
+
+html.dark [class*="bg-[#4B5563]"] { background-color: #a3a8b0 !important; }
+html.dark [class*="text-[#4B5563]"] { color: #a3a8b0 !important; }
+html.dark [class*="border-[#4B5563]"] { border-color: #a3a8b0 !important; }
+html.dark [class*="from-[#4B5563]"] { --tw-gradient-from: #a3a8b0 !important; }
+html.dark [class*="via-[#4B5563]"] { --tw-gradient-via: #a3a8b0 !important; }
+html.dark [class*="to-[#4B5563]"] { --tw-gradient-to: #a3a8b0 !important; }
+html.dark [class*="fill-[#4B5563]"] { fill: #a3a8b0 !important; }
+
+html.dark [class*="bg-[#250059]"] { background-color: #d8b4fe !important; }
+html.dark [class*="text-[#250059]"] { color: #d8b4fe !important; }
+html.dark [class*="border-[#250059]"] { border-color: #d8b4fe !important; }
+html.dark [class*="from-[#250059]"] { --tw-gradient-from: #d8b4fe !important; }
+html.dark [class*="via-[#250059]"] { --tw-gradient-via: #d8b4fe !important; }
+html.dark [class*="to-[#250059]"] { --tw-gradient-to: #d8b4fe !important; }
+html.dark [class*="fill-[#250059]"] { fill: #d8b4fe !important; }
+
+html.dark [class*="bg-[#ccc3d7]"] { background-color: #2a2830 !important; }
+html.dark [class*="text-[#ccc3d7]"] { color: #2a2830 !important; }
+html.dark [class*="border-[#ccc3d7]"] { border-color: #2a2830 !important; }
+html.dark [class*="from-[#ccc3d7]"] { --tw-gradient-from: #2a2830 !important; }
+html.dark [class*="via-[#ccc3d7]"] { --tw-gradient-via: #2a2830 !important; }
+html.dark [class*="to-[#ccc3d7]"] { --tw-gradient-to: #2a2830 !important; }
+html.dark [class*="fill-[#ccc3d7]"] { fill: #2a2830 !important; }
+
+html.dark [class*="bg-[#D1D5DB]"] { background-color: #2a2a2e !important; }
+html.dark [class*="text-[#D1D5DB]"] { color: #2a2a2e !important; }
+html.dark [class*="border-[#D1D5DB]"] { border-color: #2a2a2e !important; }
+html.dark [class*="from-[#D1D5DB]"] { --tw-gradient-from: #2a2a2e !important; }
+html.dark [class*="via-[#D1D5DB]"] { --tw-gradient-via: #2a2a2e !important; }
+html.dark [class*="to-[#D1D5DB]"] { --tw-gradient-to: #2a2a2e !important; }
+html.dark [class*="fill-[#D1D5DB]"] { fill: #2a2a2e !important; }
+
+html.dark [class*="bg-[#E5E7EB]"] { background-color: #242428 !important; }
+html.dark [class*="text-[#E5E7EB]"] { color: #242428 !important; }
+html.dark [class*="border-[#E5E7EB]"] { border-color: #242428 !important; }
+html.dark [class*="from-[#E5E7EB]"] { --tw-gradient-from: #242428 !important; }
+html.dark [class*="via-[#E5E7EB]"] { --tw-gradient-via: #242428 !important; }
+html.dark [class*="to-[#E5E7EB]"] { --tw-gradient-to: #242428 !important; }
+html.dark [class*="fill-[#E5E7EB]"] { fill: #242428 !important; }
+
+html.dark [class*="bg-[#e5e7eb]"] { background-color: #242428 !important; }
+html.dark [class*="text-[#e5e7eb]"] { color: #242428 !important; }
+html.dark [class*="border-[#e5e7eb]"] { border-color: #242428 !important; }
+html.dark [class*="from-[#e5e7eb]"] { --tw-gradient-from: #242428 !important; }
+html.dark [class*="via-[#e5e7eb]"] { --tw-gradient-via: #242428 !important; }
+html.dark [class*="to-[#e5e7eb]"] { --tw-gradient-to: #242428 !important; }
+html.dark [class*="fill-[#e5e7eb]"] { fill: #242428 !important; }
+
+html.dark [class*="bg-[#c5c6c8]"] { background-color: #2a2a2c !important; }
+html.dark [class*="text-[#c5c6c8]"] { color: #2a2a2c !important; }
+html.dark [class*="border-[#c5c6c8]"] { border-color: #2a2a2c !important; }
+html.dark [class*="from-[#c5c6c8]"] { --tw-gradient-from: #2a2a2c !important; }
+html.dark [class*="via-[#c5c6c8]"] { --tw-gradient-via: #2a2a2c !important; }
+html.dark [class*="to-[#c5c6c8]"] { --tw-gradient-to: #2a2a2c !important; }
+html.dark [class*="fill-[#c5c6c8]"] { fill: #2a2a2c !important; }
+
+html.dark [class*="bg-[#ebddff]"] { background-color: #2d1a4d !important; }
+html.dark [class*="text-[#ebddff]"] { color: #2d1a4d !important; }
+html.dark [class*="border-[#ebddff]"] { border-color: #2d1a4d !important; }
+html.dark [class*="from-[#ebddff]"] { --tw-gradient-from: #2d1a4d !important; }
+html.dark [class*="via-[#ebddff]"] { --tw-gradient-via: #2d1a4d !important; }
+html.dark [class*="to-[#ebddff]"] { --tw-gradient-to: #2d1a4d !important; }
+html.dark [class*="fill-[#ebddff]"] { fill: #2d1a4d !important; }
+
+html.dark [class*="bg-[#e8def8]"] { background-color: #2a1a42 !important; }
+html.dark [class*="text-[#e8def8]"] { color: #2a1a42 !important; }
+html.dark [class*="border-[#e8def8]"] { border-color: #2a1a42 !important; }
+html.dark [class*="from-[#e8def8]"] { --tw-gradient-from: #2a1a42 !important; }
+html.dark [class*="via-[#e8def8]"] { --tw-gradient-via: #2a1a42 !important; }
+html.dark [class*="to-[#e8def8]"] { --tw-gradient-to: #2a1a42 !important; }
+html.dark [class*="fill-[#e8def8]"] { fill: #2a1a42 !important; }
+
+html.dark [class*="bg-[#EDE9FE]"] { background-color: #2a1a42 !important; }
+html.dark [class*="text-[#EDE9FE]"] { color: #2a1a42 !important; }
+html.dark [class*="border-[#EDE9FE]"] { border-color: #2a1a42 !important; }
+html.dark [class*="from-[#EDE9FE]"] { --tw-gradient-from: #2a1a42 !important; }
+html.dark [class*="via-[#EDE9FE]"] { --tw-gradient-via: #2a1a42 !important; }
+html.dark [class*="to-[#EDE9FE]"] { --tw-gradient-to: #2a1a42 !important; }
+html.dark [class*="fill-[#EDE9FE]"] { fill: #2a1a42 !important; }
+
+html.dark [class*="bg-[#dac5ff]"] { background-color: #c9a8f5 !important; }
+html.dark [class*="text-[#dac5ff]"] { color: #c9a8f5 !important; }
+html.dark [class*="border-[#dac5ff]"] { border-color: #c9a8f5 !important; }
+html.dark [class*="from-[#dac5ff]"] { --tw-gradient-from: #c9a8f5 !important; }
+html.dark [class*="via-[#dac5ff]"] { --tw-gradient-via: #c9a8f5 !important; }
+html.dark [class*="to-[#dac5ff]"] { --tw-gradient-to: #c9a8f5 !important; }
+html.dark [class*="fill-[#dac5ff]"] { fill: #c9a8f5 !important; }
+
+html.dark [class*="bg-[#d3bbff]"] { background-color: #c9a8f5 !important; }
+html.dark [class*="text-[#d3bbff]"] { color: #c9a8f5 !important; }
+html.dark [class*="border-[#d3bbff]"] { border-color: #c9a8f5 !important; }
+html.dark [class*="from-[#d3bbff]"] { --tw-gradient-from: #c9a8f5 !important; }
+html.dark [class*="via-[#d3bbff]"] { --tw-gradient-via: #c9a8f5 !important; }
+html.dark [class*="to-[#d3bbff]"] { --tw-gradient-to: #c9a8f5 !important; }
+html.dark [class*="fill-[#d3bbff]"] { fill: #c9a8f5 !important; }
+
+html.dark [class*="bg-[#f0fdf4]"] { background-color: #0d2818 !important; }
+html.dark [class*="text-[#f0fdf4]"] { color: #0d2818 !important; }
+html.dark [class*="border-[#f0fdf4]"] { border-color: #0d2818 !important; }
+html.dark [class*="from-[#f0fdf4]"] { --tw-gradient-from: #0d2818 !important; }
+html.dark [class*="via-[#f0fdf4]"] { --tw-gradient-via: #0d2818 !important; }
+html.dark [class*="to-[#f0fdf4]"] { --tw-gradient-to: #0d2818 !important; }
+html.dark [class*="fill-[#f0fdf4]"] { fill: #0d2818 !important; }
+
+html.dark [class*="bg-[#dcfce7]"] { background-color: #0d2818 !important; }
+html.dark [class*="text-[#dcfce7]"] { color: #0d2818 !important; }
+html.dark [class*="border-[#dcfce7]"] { border-color: #0d2818 !important; }
+html.dark [class*="from-[#dcfce7]"] { --tw-gradient-from: #0d2818 !important; }
+html.dark [class*="via-[#dcfce7]"] { --tw-gradient-via: #0d2818 !important; }
+html.dark [class*="to-[#dcfce7]"] { --tw-gradient-to: #0d2818 !important; }
+html.dark [class*="fill-[#dcfce7]"] { fill: #0d2818 !important; }
+
+html.dark [class*="bg-[#fff1f2]"] { background-color: #2a0d12 !important; }
+html.dark [class*="text-[#fff1f2]"] { color: #2a0d12 !important; }
+html.dark [class*="border-[#fff1f2]"] { border-color: #2a0d12 !important; }
+html.dark [class*="from-[#fff1f2]"] { --tw-gradient-from: #2a0d12 !important; }
+html.dark [class*="via-[#fff1f2]"] { --tw-gradient-via: #2a0d12 !important; }
+html.dark [class*="to-[#fff1f2]"] { --tw-gradient-to: #2a0d12 !important; }
+html.dark [class*="fill-[#fff1f2]"] { fill: #2a0d12 !important; }
+
+html.dark [class*="bg-[#ffe4e6]"] { background-color: #2a0d12 !important; }
+html.dark [class*="text-[#ffe4e6]"] { color: #2a0d12 !important; }
+html.dark [class*="border-[#ffe4e6]"] { border-color: #2a0d12 !important; }
+html.dark [class*="from-[#ffe4e6]"] { --tw-gradient-from: #2a0d12 !important; }
+html.dark [class*="via-[#ffe4e6]"] { --tw-gradient-via: #2a0d12 !important; }
+html.dark [class*="to-[#ffe4e6]"] { --tw-gradient-to: #2a0d12 !important; }
+html.dark [class*="fill-[#ffe4e6]"] { fill: #2a0d12 !important; }
+
+html.dark [class*="bg-[#fecdd3]"] { background-color: #2a0d12 !important; }
+html.dark [class*="text-[#fecdd3]"] { color: #2a0d12 !important; }
+html.dark [class*="border-[#fecdd3]"] { border-color: #2a0d12 !important; }
+html.dark [class*="from-[#fecdd3]"] { --tw-gradient-from: #2a0d12 !important; }
+html.dark [class*="via-[#fecdd3]"] { --tw-gradient-via: #2a0d12 !important; }
+html.dark [class*="to-[#fecdd3]"] { --tw-gradient-to: #2a0d12 !important; }
+html.dark [class*="fill-[#fecdd3]"] { fill: #2a0d12 !important; }
+
+html.dark [class*="bg-[#ffdad6]"] { background-color: #2a0d12 !important; }
+html.dark [class*="text-[#ffdad6]"] { color: #2a0d12 !important; }
+html.dark [class*="border-[#ffdad6]"] { border-color: #2a0d12 !important; }
+html.dark [class*="from-[#ffdad6]"] { --tw-gradient-from: #2a0d12 !important; }
+html.dark [class*="via-[#ffdad6]"] { --tw-gradient-via: #2a0d12 !important; }
+html.dark [class*="to-[#ffdad6]"] { --tw-gradient-to: #2a0d12 !important; }
+html.dark [class*="fill-[#ffdad6]"] { fill: #2a0d12 !important; }
+
+html.dark [class*="bg-[#eff6ff]"] { background-color: #0d1a2a !important; }
+html.dark [class*="text-[#eff6ff]"] { color: #0d1a2a !important; }
+html.dark [class*="border-[#eff6ff]"] { border-color: #0d1a2a !important; }
+html.dark [class*="from-[#eff6ff]"] { --tw-gradient-from: #0d1a2a !important; }
+html.dark [class*="via-[#eff6ff]"] { --tw-gradient-via: #0d1a2a !important; }
+html.dark [class*="to-[#eff6ff]"] { --tw-gradient-to: #0d1a2a !important; }
+html.dark [class*="fill-[#eff6ff]"] { fill: #0d1a2a !important; }
+
+html.dark [class*="bg-[#dbeafe]"] { background-color: #0d1a2a !important; }
+html.dark [class*="text-[#dbeafe]"] { color: #0d1a2a !important; }
+html.dark [class*="border-[#dbeafe]"] { border-color: #0d1a2a !important; }
+html.dark [class*="from-[#dbeafe]"] { --tw-gradient-from: #0d1a2a !important; }
+html.dark [class*="via-[#dbeafe]"] { --tw-gradient-via: #0d1a2a !important; }
+html.dark [class*="to-[#dbeafe]"] { --tw-gradient-to: #0d1a2a !important; }
+html.dark [class*="fill-[#dbeafe]"] { fill: #0d1a2a !important; }
+
+html.dark [class*="bg-[#bfdbfe]"] { background-color: #0d1a2a !important; }
+html.dark [class*="text-[#bfdbfe]"] { color: #0d1a2a !important; }
+html.dark [class*="border-[#bfdbfe]"] { border-color: #0d1a2a !important; }
+html.dark [class*="from-[#bfdbfe]"] { --tw-gradient-from: #0d1a2a !important; }
+html.dark [class*="via-[#bfdbfe]"] { --tw-gradient-via: #0d1a2a !important; }
+html.dark [class*="to-[#bfdbfe]"] { --tw-gradient-to: #0d1a2a !important; }
+html.dark [class*="fill-[#bfdbfe]"] { fill: #0d1a2a !important; }
+
+html.dark [class~="bg-white"] { background-color: #0d0d0d !important; }
+html.dark [class*="bg-white/"] { background-color: rgba(13,13,13,0.85) !important; }
+html.dark [class~="text-white"] { color: #f2f2f5 !important; }
+html.dark [class~="border-white"] { border-color: #2a2830 !important; }
+
+html.dark .bg-gray-50 { background-color: #0d0d0d !important; }
+html.dark .bg-gray-100 { background-color: #141414 !important; }
+html.dark .bg-slate-50 { background-color: #0d0d0d !important; }
+html.dark .text-gray-900 { color: #f2f2f5 !important; }
+html.dark .text-gray-800 { color: #e5e5e5 !important; }
+html.dark .text-gray-600 { color: #a3a3a3 !important; }
+html.dark .text-gray-500 { color: #8c8c8c !important; }
+html.dark .border-gray-200 { border-color: #262626 !important; }
+html.dark .border-gray-100 { border-color: #1f1f1f !important; }
+
+/* Keep purple brand accents (#5300b7 / #6d28d9) and status colors
+   (success/error greens & reds) visually intact in dark mode -- they
+   already have sufficient contrast against pure black. */
+
+/* Inputs, cards, and modals get a subtle border so they read as distinct
+   surfaces against pure black instead of blending flat. */
+html.dark input, html.dark select, html.dark textarea {
+  background-color: #111111 !important;
+  border-color: #2a2830 !important;
+  color: #f2f2f5 !important;
+}
+html.dark input::placeholder, html.dark textarea::placeholder {
+  color: #6b6b6b !important;
+}
+html.dark img { opacity: 0.92; }
