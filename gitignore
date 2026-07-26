@@ -1,0 +1,63 @@
+###############################################################################
+# Pa_mSikA — root .gitignore (covers backend/ and frontend/)
+###############################################################################
+
+# ── Environment / secrets ────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Python (backend) ─────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+*.egg-info/
+*.egg
+.eggs/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# ── Node / Vite (frontend) ───────────────────────────────────────────────────
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ── Built frontend copied into the backend at deploy time ──────────────────
+backend/frontend_dist/
+
+# ── Uploaded media (runtime data, not source) ────────────────────────────────
+backend/uploads/
+uploads/
+
+# ── Docker volumes (local data) ──────────────────────────────────────────────
+postgres_data/
+redis_data/
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── IDE / editor ──────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

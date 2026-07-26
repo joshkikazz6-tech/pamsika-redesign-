@@ -1,0 +1,6 @@
+{
+  "name": "Pa_mSikA - Malawi's Premium Marketplace",
+  "description": "An all-in-one trusted marketplace for Malawi featuring buyer catalog, cart, seller hub, admin dashboard, community feed, live chat, and Dolo affiliate system.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
