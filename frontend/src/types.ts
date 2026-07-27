@@ -43,8 +43,19 @@ export interface ChatConversation {
   lastMessage: string;
   timestamp: string;
   unreadCount: number;
-  type: 'seller' | 'buyer' | 'admin';
+  type: 'seller' | 'buyer' | 'admin' | 'vendor';
   messages: ChatMessage[];
+}
+
+export interface PostComment {
+  id: string;
+  authorName: string;
+  authorAvatar: string;
+  authorBadge?: string;
+  timestamp: string;
+  text: string;
+  likes?: number;
+  isLiked?: boolean;
 }
 
 export interface CommunityPost {
@@ -59,6 +70,9 @@ export interface CommunityPost {
   likes: number;
   isLiked?: boolean;
   commentsCount: number;
+  comments?: PostComment[];
+  isAdminPost?: boolean;
+  taggedProduct?: Product;
 }
 
 export interface OrderItem {

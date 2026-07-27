@@ -1,6 +1,5 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
 import { Api, ApiError } from '../lib/api';
 
 interface SettingsViewProps {
@@ -8,16 +7,19 @@ interface SettingsViewProps {
   onSelectCity: (city: string) => void;
   onNavigate: (view: string) => void;
   onShowToast: (msg: string) => void;
+  isDarkMode?: boolean;
+  onToggleDarkMode?: () => void;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
   currentCity,
   onSelectCity,
   onNavigate,
-  onShowToast
+  onShowToast,
+  isDarkMode = false,
+  onToggleDarkMode
 }) => {
   const { user, logout } = useAuth();
-  const { theme, setTheme } = useTheme();
   const [currency, setCurrency] = useState<'MWK' | 'USD'>('MWK');
   const [language, setLanguage] = useState<'en' | 'ch'>('en');
   const [pushEnabled, setPushEnabled] = useState(true);
@@ -181,11 +183,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <div className="flex gap-3 overflow-x-auto pb-1">
           <button
             onClick={() => {
-              setTheme('light');
+              if (isDarkMode && onToggleDarkMode) onToggleDarkMode();
               onShowToast('Purple Elite theme active');
             }}
             className={`p-3 rounded-2xl border flex-1 text-center transition-all ${
-              theme === 'light' ? 'border-[#6D28D9] bg-[#EDE9FE]' : 'border-[#E5E7EB] bg-white'
+              !isDarkMode ? 'border-[#6D28D9] bg-[#EDE9FE]' : 'border-[#E5E7EB] bg-white'
             }`}
           >
             <div className="w-full h-8 bg-[#6D28D9] rounded-lg mb-2"></div>
@@ -194,11 +196,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
           <button
             onClick={() => {
-              setTheme('dark');
+              if (!isDarkMode && onToggleDarkMode) onToggleDarkMode();
               onShowToast('Pure Black theme active');
             }}
             className={`p-3 rounded-2xl border flex-1 text-center transition-all ${
-              theme === 'dark' ? 'border-[#6D28D9] bg-slate-900 text-white' : 'border-[#E5E7EB] bg-white'
+              isDarkMode ? 'border-[#6D28D9] bg-slate-900 text-white' : 'border-[#E5E7EB] bg-white'
             }`}
           >
             <div className="w-full h-8 bg-black border border-[#333] rounded-lg mb-2"></div>
@@ -324,7 +326,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </h3>
         <div className="bg-[#F9FAFB] rounded-2xl p-4 border border-[#E5E7EB] space-y-3">
           <div className="bg-white p-3 rounded-xl border border-[#E5E7EB] flex items-center justify-between">
-            <span className="text-xs font-mono text-[#4B5563] truncate">palmsika.mw/ref/jdoe77</span>
+            <span className="text-xs font-mono text-[#4B5563] truncate">
+              {user?.affiliate_id ? `${window.location.host}/?ref=${user.affiliate_id}` : window.location.host}
+            </span>
             <button
               onClick={copyRefLink}
               className="text-[#6D28D9] font-bold text-xs hover:underline ml-2"
@@ -347,7 +351,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           >
             <div>
               <p className="font-bold text-sm text-[#111827]">Change Password</p>
-              <p className="text-[11px] text-[#4B5563]">Last updated 3 months ago</p>
+              <p className="text-[11px] text-[#4B5563]">Update your account password</p>
             </div>
             <span className="material-symbols-outlined text-[#4B5563]">
               {isPasswordFormOpen ? 'expand_less' : 'chevron_right'}

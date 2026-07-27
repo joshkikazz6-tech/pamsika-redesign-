@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
 
 interface HeaderProps {
   currentView: string;
@@ -10,6 +9,8 @@ interface HeaderProps {
   onSearchChange: (q: string) => void;
   cartCount: number;
   unreadMessagesCount?: number;
+  isDarkMode?: boolean;
+  onToggleDarkMode?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -20,38 +21,12 @@ export const Header: React.FC<HeaderProps> = ({
   searchQuery,
   onSearchChange,
   cartCount,
-  unreadMessagesCount = 0
+  unreadMessagesCount = 0,
+  isDarkMode = false,
+  onToggleDarkMode,
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { user, openAuthModal, logout } = useAuth();
   const cities = ['Lilongwe', 'Blantyre', 'Mzuzu', 'Zomba'];
-
-  const initials = user
-    ? user.full_name
-        .split(' ')
-        .map((p) => p[0])
-        .slice(0, 2)
-        .join('')
-        .toUpperCase()
-    : '?';
-
-  const roleLabel = user
-    ? user.is_admin
-      ? 'Super Admin • Verified'
-      : user.is_seller && user.seller_status === 'approved'
-      ? 'Verified Seller'
-      : user.is_affiliate
-      ? 'Dolo Affiliate'
-      : 'Member'
-    : 'Guest';
-
-  const handleAvatarClick = () => {
-    if (!user) {
-      openAuthModal('login');
-    } else {
-      onNavigate('settings');
-    }
-  };
 
   const handleNavClick = (view: string) => {
     onNavigate(view);
@@ -70,19 +45,19 @@ export const Header: React.FC<HeaderProps> = ({
   const portalItems = [
     { id: 'dolo', label: 'Dolo Affiliate Hub', icon: 'token' },
     { id: 'seller', label: 'SellerHub Dashboard', icon: 'store' },
-    ...(user?.is_admin ? [{ id: 'admin', label: 'Super Admin Portal', icon: 'dashboard_customize' }] : []),
+    { id: 'admin', label: 'Super Admin Portal', icon: 'dashboard_customize' },
   ];
 
   return (
     <>
-      <header className="fixed top-0 w-full z-40 bg-[#fbf8ff]/85 backdrop-blur-xl pt-safe shadow-sm border-b border-[#ccc3d7]/30">
+      <header className="fixed top-0 w-full z-40 bg-white/90 dark:bg-black/90 backdrop-blur-xl pt-safe shadow-sm border-b border-slate-200/80 dark:border-zinc-800 transition-colors">
         <div className="h-16 md:h-20 px-2.5 sm:px-4 md:px-8 max-w-7xl mx-auto flex items-center gap-2 justify-between min-w-0">
           
           {/* Upper Left: Menu Toggle + Brand Logo */}
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => setIsMenuOpen(true)}
-              className="p-2 text-[#5300b7] hover:bg-[#5300b7]/10 rounded-xl transition-colors flex items-center justify-center cursor-pointer"
+              className="p-2 text-slate-800 dark:text-white hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-xl transition-colors flex items-center justify-center cursor-pointer"
               aria-label="Open Navigation Menu"
               title="Open Navigation Menu"
             >
@@ -93,34 +68,34 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => onNavigate('home')} 
               className="cursor-pointer flex items-center gap-1 shrink-0"
             >
-              <span className="font-serif-source text-lg sm:text-2xl font-bold text-[#5300b7] tracking-tight">
+              <span className="font-serif-source text-lg sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
                 Pa_mSikA
               </span>
             </div>
           </div>
 
           {/* Search Bar */}
-          <div className="flex-1 min-w-0 max-w-lg mx-1 sm:mx-2 flex items-center bg-[#f4f2fd] rounded-full px-2.5 sm:px-3 py-1.5 border border-[#ccc3d7]/50 focus-within:ring-2 focus-within:ring-[#5300b7]/30 transition-all">
-            <span className="material-symbols-outlined text-[#4a4455] text-[18px] sm:text-[20px] shrink-0">search</span>
+          <div className="flex-1 min-w-0 max-w-lg mx-1 sm:mx-2 flex items-center bg-slate-100 dark:bg-zinc-900 rounded-full px-2.5 sm:px-3 py-1.5 border border-slate-200 dark:border-zinc-800 focus-within:ring-2 focus-within:ring-slate-400 transition-all">
+            <span className="material-symbols-outlined text-slate-500 dark:text-zinc-400 text-[18px] sm:text-[20px] shrink-0">search</span>
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="Search..."
-              className="bg-transparent border-none focus:outline-none text-xs sm:text-sm w-full px-1 sm:px-2 text-[#1a1b22] placeholder-[#4a4455]/60 min-w-0"
+              className="bg-transparent border-none focus:outline-none text-xs sm:text-sm w-full px-1 sm:px-2 text-slate-900 dark:text-white placeholder-slate-400 min-w-0"
             />
-            <div className="hidden sm:block w-[1px] h-4 bg-[#ccc3d7]/50 mx-1 shrink-0"></div>
+            <div className="hidden sm:block w-[1px] h-4 bg-slate-300 dark:bg-zinc-700 mx-1 shrink-0"></div>
             
             {/* Location Selector */}
-            <div className="relative group shrink-0 hidden sm:flex items-center gap-1 text-[#5300b7] cursor-pointer">
+            <div className="relative group shrink-0 hidden sm:flex items-center gap-1 text-slate-700 dark:text-zinc-300 cursor-pointer">
               <span className="material-symbols-outlined text-[18px]">location_on</span>
               <select
                 value={currentCity}
                 onChange={(e) => onSelectCity(e.target.value)}
-                className="bg-transparent text-xs font-semibold text-[#5300b7] focus:outline-none cursor-pointer pr-1"
+                className="bg-transparent text-xs font-semibold text-slate-800 dark:text-zinc-200 focus:outline-none cursor-pointer pr-1"
               >
                 {cities.map((city) => (
-                  <option key={city} value={city}>
+                  <option key={city} value={city} className="bg-white text-slate-900 dark:bg-black dark:text-white">
                     {city}
                   </option>
                 ))}
@@ -133,7 +108,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Dolo Quick Button */}
             <button
               onClick={() => onNavigate('dolo')}
-              className="flex flex-col items-center justify-center min-w-[32px] sm:min-w-[40px] h-9 sm:h-10 text-[#5300b7] hover:bg-[#5300b7]/5 rounded-xl px-1 sm:px-1.5 transition-colors"
+              className="flex flex-col items-center justify-center min-w-[32px] sm:min-w-[40px] h-9 sm:h-10 text-slate-800 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-xl px-1 sm:px-1.5 transition-colors cursor-pointer"
               title="Dolo Affiliate Hub"
             >
               <span className="material-symbols-outlined text-[18px] sm:text-[20px]">token</span>
@@ -143,12 +118,12 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Cart Icon Button */}
             <button
               onClick={() => onNavigate('cart')}
-              className="relative p-1.5 sm:p-2 text-[#4a4455] hover:text-[#5300b7] hover:bg-[#5300b7]/5 rounded-full transition-colors"
+              className="relative p-1.5 sm:p-2 text-slate-800 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-full transition-colors cursor-pointer"
               title="Shopping Cart"
             >
               <span className="material-symbols-outlined text-[20px] sm:text-[22px]">shopping_cart</span>
               {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-[#5300b7] text-white text-[9px] sm:text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 bg-black text-white dark:bg-white dark:text-black text-[9px] sm:text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                   {cartCount}
                 </span>
               )}
@@ -156,11 +131,11 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* User Profile / Settings */}
             <button
-              onClick={handleAvatarClick}
-              className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#5300b7] flex items-center justify-center text-white font-semibold text-[10px] sm:text-xs shadow-sm hover:scale-105 transition-transform"
-              title={user ? 'Account Settings' : 'Sign In'}
+              onClick={() => onNavigate('settings')}
+              className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-900 text-white dark:bg-white dark:text-black flex items-center justify-center font-semibold text-[10px] sm:text-xs shadow-sm hover:scale-105 transition-transform cursor-pointer"
+              title="Account Settings"
             >
-              {user ? initials : <span className="material-symbols-outlined text-[16px]">person</span>}
+              JD
             </button>
           </div>
         </div>
@@ -176,21 +151,21 @@ export const Header: React.FC<HeaderProps> = ({
           />
 
           {/* Drawer Content */}
-          <aside className="relative z-10 w-80 max-w-[82vw] h-full bg-white shadow-2xl flex flex-col justify-between p-5 overflow-y-auto animate-in slide-in-from-left duration-300">
+          <aside className="relative z-10 w-80 max-w-[82vw] h-full bg-white dark:bg-black text-slate-900 dark:text-white border-r border-slate-200 dark:border-zinc-800 shadow-2xl flex flex-col justify-between p-5 overflow-y-auto animate-in slide-in-from-left duration-300">
             <div className="space-y-6">
               {/* Drawer Header */}
-              <div className="flex items-center justify-between border-b border-[#ccc3d7]/30 pb-4">
+              <div className="flex items-center justify-between border-b border-slate-200 dark:border-zinc-800 pb-4">
                 <div className="flex items-center gap-2">
-                  <span className="font-serif-source text-2xl font-bold text-[#5300b7]">
+                  <span className="font-serif-source text-2xl font-bold text-slate-900 dark:text-white">
                     Pa_mSikA
                   </span>
-                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 bg-[#ebddff] text-[#5300b7] rounded-full">
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 rounded-full">
                     Malawi
                   </span>
                 </div>
                 <button
                   onClick={() => setIsMenuOpen(false)}
-                  className="p-1.5 text-[#4a4455] hover:text-[#5300b7] hover:bg-[#f4f2fd] rounded-full transition-colors cursor-pointer"
+                  className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-zinc-800 dark:text-zinc-400 dark:hover:text-white rounded-full transition-colors cursor-pointer"
                   title="Close menu"
                 >
                   <span className="material-symbols-outlined text-[22px]">close</span>
@@ -198,15 +173,15 @@ export const Header: React.FC<HeaderProps> = ({
               </div>
 
               {/* City Location Mobile Selector */}
-              <div className="bg-[#f4f2fd] p-3 rounded-2xl border border-[#ccc3d7]/30 flex items-center justify-between">
-                <div className="flex items-center gap-2 text-[#5300b7]">
+              <div className="bg-slate-100 dark:bg-zinc-900 p-3 rounded-2xl border border-slate-200 dark:border-zinc-800 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-slate-800 dark:text-zinc-200">
                   <span className="material-symbols-outlined text-[20px]">location_on</span>
                   <span className="text-xs font-bold">Active City:</span>
                 </div>
                 <select
                   value={currentCity}
                   onChange={(e) => onSelectCity(e.target.value)}
-                  className="bg-white border border-[#ccc3d7]/50 rounded-xl px-2.5 py-1 text-xs font-bold text-[#5300b7] focus:outline-none cursor-pointer"
+                  className="bg-white dark:bg-black border border-slate-200 dark:border-zinc-800 rounded-xl px-2.5 py-1 text-xs font-bold text-slate-800 dark:text-white focus:outline-none cursor-pointer"
                 >
                   {cities.map((c) => (
                     <option key={c} value={c}>
@@ -218,7 +193,7 @@ export const Header: React.FC<HeaderProps> = ({
 
               {/* Main Navigation Links */}
               <div>
-                <p className="text-[10px] font-bold text-[#7b7486] uppercase tracking-widest px-2 mb-2">
+                <p className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest px-2 mb-2">
                   Explore Marketplace
                 </p>
                 <nav className="space-y-1">
@@ -228,10 +203,10 @@ export const Header: React.FC<HeaderProps> = ({
                       <button
                         key={item.id}
                         onClick={() => handleNavClick(item.id)}
-                        className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition-all text-left ${
+                        className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-bold transition-all text-left cursor-pointer ${
                           isActive
-                            ? 'bg-[#5300b7] text-white shadow-md'
-                            : 'text-[#1a1b22] hover:bg-[#f4f2fd]'
+                            ? 'bg-slate-900 text-white dark:bg-white dark:text-black shadow-md'
+                            : 'text-slate-800 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-900'
                         }`}
                       >
                         <div className="flex items-center gap-3">
@@ -244,8 +219,8 @@ export const Header: React.FC<HeaderProps> = ({
                           <span
                             className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
                               isActive
-                                ? 'bg-white text-[#5300b7]'
-                                : 'bg-[#5300b7] text-white'
+                                ? 'bg-white text-slate-900 dark:bg-black dark:text-white'
+                                : 'bg-slate-900 text-white dark:bg-white dark:text-black'
                             }`}
                           >
                             {item.badge}
@@ -259,7 +234,7 @@ export const Header: React.FC<HeaderProps> = ({
 
               {/* Ecosystem Portals */}
               <div>
-                <p className="text-[10px] font-bold text-[#7b7486] uppercase tracking-widest px-2 mb-2">
+                <p className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest px-2 mb-2">
                   Portals &amp; Sellers
                 </p>
                 <nav className="space-y-1">
@@ -269,10 +244,10 @@ export const Header: React.FC<HeaderProps> = ({
                       <button
                         key={item.id}
                         onClick={() => handleNavClick(item.id)}
-                        className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all text-left ${
+                        className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all text-left cursor-pointer ${
                           isActive
-                            ? 'bg-[#5300b7] text-white shadow-md'
-                            : 'text-[#4a4455] hover:bg-[#f4f2fd]'
+                            ? 'bg-slate-900 text-white dark:bg-white dark:text-black shadow-md'
+                            : 'text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-900'
                         }`}
                       >
                         <span className="material-symbols-outlined text-[20px]">
@@ -287,57 +262,65 @@ export const Header: React.FC<HeaderProps> = ({
 
               {/* Preferences & Settings */}
               <div>
-                <p className="text-[10px] font-bold text-[#7b7486] uppercase tracking-widest px-2 mb-2">
+                <p className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-widest px-2 mb-2">
                   Preferences
                 </p>
                 <nav className="space-y-1">
+                  {onToggleDarkMode && (
+                    <button
+                      onClick={onToggleDarkMode}
+                      className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-900 transition-all cursor-pointer"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="material-symbols-outlined text-[20px]">
+                          {isDarkMode ? 'light_mode' : 'dark_mode'}
+                        </span>
+                        <span>{isDarkMode ? 'Light Theme' : 'Dark Theme'}</span>
+                      </div>
+                      <span
+                        className={`w-9 h-5 rounded-full p-0.5 transition-colors ${
+                          isDarkMode ? 'bg-white' : 'bg-slate-300'
+                        } flex items-center`}
+                      >
+                        <span
+                          className={`w-4 h-4 rounded-full transition-transform ${
+                            isDarkMode ? 'translate-x-4 bg-black' : 'translate-x-0 bg-white'
+                          } shadow-sm`}
+                        />
+                      </span>
+                    </button>
+                  )}
+
                   <button
                     onClick={() => handleNavClick('settings')}
-                    className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all text-left ${
+                    className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all text-left cursor-pointer ${
                       currentView === 'settings'
-                        ? 'bg-[#5300b7] text-white shadow-md'
-                        : 'text-[#4a4455] hover:bg-[#f4f2fd]'
+                        ? 'bg-slate-900 text-white dark:bg-white dark:text-black shadow-md'
+                        : 'text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-900'
                     }`}
                   >
                     <span className="material-symbols-outlined text-[20px]">settings</span>
                     <span>Account Settings</span>
                   </button>
-                  {user ? (
-                    <button
-                      onClick={() => {
-                        logout();
-                        setIsMenuOpen(false);
-                        onNavigate('home');
-                      }}
-                      className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all text-left text-red-600 hover:bg-red-50"
-                    >
-                      <span className="material-symbols-outlined text-[20px]">logout</span>
-                      <span>Sign Out</span>
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        setIsMenuOpen(false);
-                        openAuthModal('login');
-                      }}
-                      className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all text-left text-[#5300b7] hover:bg-[#f4f2fd]"
-                    >
-                      <span className="material-symbols-outlined text-[20px]">login</span>
-                      <span>Sign In / Register</span>
-                    </button>
-                  )}
+                  <button
+                    onClick={() => handleNavClick('landing')}
+                    className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all text-left text-red-600 hover:bg-red-50 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">rocket_launch</span>
+                    <span>Welcome Landing</span>
+                  </button>
                 </nav>
               </div>
             </div>
 
             {/* Drawer Footer User Profile */}
-            <div className="pt-4 border-t border-[#ccc3d7]/30 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-[#5300b7] flex items-center justify-center text-white font-bold text-xs shadow-sm">
-                {initials}
+            <div className="pt-4 border-t border-slate-200 dark:border-zinc-800 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-slate-900 text-white dark:bg-white dark:text-black flex items-center justify-center font-bold text-xs shadow-sm">
+                JD
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-[#1a1b22] truncate">{user ? user.full_name : 'Guest'}</p>
-                <p className="text-[10px] text-[#7b7486]">{roleLabel}</p>
+                <p className="text-xs font-bold text-slate-900 dark:text-white truncate">John Doe</p>
+                <p className="text-[10px] text-slate-500 dark:text-zinc-400">Super Admin • Verified</p>
               </div>
             </div>
           </aside>

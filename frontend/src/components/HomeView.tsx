@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Product } from '../types';
 import { ProductDetailModal } from './ProductDetailModal';
+import { SmartRecommendationFeed } from './SmartRecommendationFeed';
+import { trackProductView } from '../lib/recommendationEngine';
 
 interface HomeViewProps {
   products: Product[];
@@ -11,6 +13,7 @@ interface HomeViewProps {
   searchQuery: string;
   onShowToast?: (msg: string) => void;
   onOrderNow?: (product: Product) => void;
+  onViewProduct?: (product: Product) => void;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -22,8 +25,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
   searchQuery,
   onShowToast,
   onOrderNow,
+  onViewProduct,
 }) => {
   const [selectedProductModal, setSelectedProductModal] = useState<Product | null>(null);
+
+  const activeModalProduct = selectedProductModal
+    ? products.find((p) => p.id === selectedProductModal.id) || selectedProductModal
+    : null;
 
   const categories = [
     { name: 'Automobiles', icon: 'directions_car' },
@@ -186,7 +194,14 @@ export const HomeView: React.FC<HomeViewProps> = ({
               >
                 {/* Image Header - Clickable for Full Screen Gallery View */}
                 <div
-                  onClick={() => setSelectedProductModal(product)}
+                  onClick={() => {
+                    if (onViewProduct) {
+                      onViewProduct(product);
+                    } else {
+                      trackProductView(product);
+                    }
+                    setSelectedProductModal(product);
+                  }}
                   className="relative aspect-square w-full overflow-hidden bg-[#e8e7f1] cursor-pointer group/img"
                   title="Click image to open full screen photo gallery"
                 >
@@ -210,7 +225,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                       e.stopPropagation();
                       onToggleWishlist(product.id);
                     }}
-                    className="absolute top-4 right-4 w-9 h-9 bg-white/70 backdrop-blur-md rounded-full flex items-center justify-center text-[#1a1b22] hover:text-[#6d28d9] transition-colors shadow-sm cursor-pointer z-10"
+                    className="absolute top-4 right-4 w-9 h-9 bg-white/70 dark:bg-black/80 backdrop-blur-md rounded-full flex items-center justify-center text-[#1a1b22] dark:text-white hover:text-[#6d28d9] transition-colors shadow-sm cursor-pointer z-10"
                   >
                     <span
                       className={`material-symbols-outlined text-[20px] ${
@@ -239,11 +254,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
                     <div className="flex gap-3 items-center text-[#4a4455] text-xs">
                       <div className="flex items-center gap-1">
                         <span className="material-symbols-outlined text-[15px]">visibility</span>
-                        <span>{product.viewsCount || 850}</span>
+                        <span>{(product.viewsCount ?? 0).toLocaleString()}</span>
                       </div>
                       <div className="flex items-center gap-1 text-[#059669]">
                         <span className="material-symbols-outlined text-[15px]">payments</span>
-                        <span>{product.commission || 5}% Comm.</span>
+                        <span>
+                          MWK {Math.round((product.price * (product.commission || 5)) / 100).toLocaleString()} ({product.commission || 5}%)
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -305,6 +322,27 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </div>
       </section>
 
+      {/* Algorithmic Smart Recommendation Feed (Facebook/YouTube style personalization) */}
+      <SmartRecommendationFeed
+        products={products}
+        wishlistIds={wishlistIds}
+        cartProductIds={[]}
+        onAddToCart={onAddToCart}
+        onToggleWishlist={onToggleWishlist}
+        onSelectProduct={(p) => {
+          trackProductView(p);
+          setSelectedProductModal(p);
+        }}
+        onOrderNow={(p) => {
+          if (onOrderNow) {
+            onOrderNow(p);
+          } else {
+            onAddToCart(p);
+          }
+        }}
+        onShowToast={(msg) => onShowToast && onShowToast(msg)}
+      />
+
       {/* Community CTA */}
       <section className="pb-8">
         <div className="p-6 md:p-8 bg-[#e8e7f1] rounded-2xl flex flex-col items-center text-center border border-[#ccc3d7]/40 border-dashed">
@@ -328,7 +366,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
       {/* Full-Screen Product Detail Modal */}
       <ProductDetailModal
-        product={selectedProductModal}
+        product={activeModalProduct}
         onClose={() => setSelectedProductModal(null)}
         onAddToCart={onAddToCart}
         onToggleWishlist={onToggleWishlist}

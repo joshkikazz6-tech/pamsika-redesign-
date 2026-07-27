@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { CartItem } from '../types';
+import { CartItem, Product } from '../types';
+import { OrderMethodsModal } from './OrderMethodsModal';
 
 interface CartViewProps {
   cartItems: CartItem[];
@@ -8,7 +9,11 @@ interface CartViewProps {
   onClearCart: () => void;
   onNavigate: (view: string) => void;
   onShowToast: (msg: string) => void;
-  onCheckout: (paymentMethod: string, contactInfo: { name: string; phone: string; address: string }) => Promise<void>;
+  onConfirmCartOrder?: (
+    product: Product | null,
+    method: 'whatsapp' | 'facebook' | 'email' | 'pamsika',
+    customMsg?: string
+  ) => void;
 }
 
 export const CartView: React.FC<CartViewProps> = ({
@@ -18,15 +23,11 @@ export const CartView: React.FC<CartViewProps> = ({
   onClearCart,
   onNavigate,
   onShowToast,
-  onCheckout
+  onConfirmCartOrder,
 }) => {
   const [promoCode, setPromoCode] = useState('');
   const [discount, setDiscount] = useState(0);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'airtel' | 'mpamba' | 'card'>('airtel');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [deliveryAddress, setDeliveryAddress] = useState('Area 10, Lilongwe');
-  const [isOrderPlaced, setIsOrderPlaced] = useState(false);
 
   const subtotal = cartItems.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
   const total = Math.max(0, subtotal - discount);
@@ -38,24 +39,6 @@ export const CartView: React.FC<CartViewProps> = ({
     } else if (promoCode.trim().length > 0) {
       onShowToast('Try code "PAMSIKA10" for 10% off!');
     }
-  };
-
-  const handleCheckoutSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsOrderPlaced(true);
-    onCheckout(paymentMethod, { name: 'Customer', phone: phoneNumber, address: deliveryAddress })
-      .then(() => {
-        setTimeout(() => {
-          setIsCheckoutOpen(false);
-          setIsOrderPlaced(false);
-          onShowToast('Order placed successfully! Track status in Settings -> Orders.');
-          onNavigate('home');
-        }, 1200);
-      })
-      .catch((err: any) => {
-        setIsOrderPlaced(false);
-        onShowToast(err?.message || 'Could not place order — please try again.');
-      });
   };
 
   if (cartItems.length === 0) {
@@ -218,119 +201,20 @@ export const CartView: React.FC<CartViewProps> = ({
         </div>
       </div>
 
-      {/* Checkout Modal */}
+      {/* Order Methods Modal for Cart Checkout */}
       {isCheckoutOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full overflow-hidden shadow-2xl p-6 animate-in fade-in zoom-in duration-200">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-serif-source text-xl font-bold text-[#121c2a]">Checkout Details</h3>
-              <button
-                onClick={() => setIsCheckoutOpen(false)}
-                className="text-[#7b7486] hover:text-[#121c2a]"
-              >
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-
-            {isOrderPlaced ? (
-              <div className="py-12 flex flex-col items-center text-center">
-                <div className="w-16 h-16 bg-[#059669]/10 text-[#059669] rounded-full flex items-center justify-center mb-4 animate-bounce">
-                  <span className="material-symbols-outlined text-4xl">check_circle</span>
-                </div>
-                <h4 className="font-serif-source text-2xl font-bold text-[#121c2a]">Processing Order!</h4>
-                <p className="text-xs text-[#4a4455] mt-2">
-                  Sending details to merchant and dispatching delivery agent...
-                </p>
-              </div>
-            ) : (
-              <form onSubmit={handleCheckoutSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-[#4a4455] uppercase mb-1">
-                    Delivery Address
-                  </label>
-                  <input
-                    type="text"
-                    value={deliveryAddress}
-                    onChange={(e) => setDeliveryAddress(e.target.value)}
-                    required
-                    className="w-full bg-[#eff4ff] border border-[#ccc3d7]/50 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#5300b7]/30"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-[#4a4455] uppercase mb-1">
-                    Phone Number (Mobile Money)
-                  </label>
-                  <input
-                    type="tel"
-                    placeholder="0990 000 000"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    required
-                    className="w-full bg-[#eff4ff] border border-[#ccc3d7]/50 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#5300b7]/30"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-[#4a4455] uppercase mb-2">
-                    Payment Method
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('airtel')}
-                      className={`p-3 rounded-xl border text-center text-xs font-bold flex flex-col items-center gap-1 ${
-                        paymentMethod === 'airtel'
-                          ? 'border-[#5300b7] bg-[#5300b7]/10 text-[#5300b7]'
-                          : 'border-[#ccc3d7]/50 text-[#4a4455]'
-                      }`}
-                    >
-                      <span className="material-symbols-outlined text-[20px]">phone_iphone</span>
-                      Airtel Money
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('mpamba')}
-                      className={`p-3 rounded-xl border text-center text-xs font-bold flex flex-col items-center gap-1 ${
-                        paymentMethod === 'mpamba'
-                          ? 'border-[#5300b7] bg-[#5300b7]/10 text-[#5300b7]'
-                          : 'border-[#ccc3d7]/50 text-[#4a4455]'
-                      }`}
-                    >
-                      <span className="material-symbols-outlined text-[20px]">payments</span>
-                      TNM Mpamba
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('card')}
-                      className={`p-3 rounded-xl border text-center text-xs font-bold flex flex-col items-center gap-1 ${
-                        paymentMethod === 'card'
-                          ? 'border-[#5300b7] bg-[#5300b7]/10 text-[#5300b7]'
-                          : 'border-[#ccc3d7]/50 text-[#4a4455]'
-                      }`}
-                    >
-                      <span className="material-symbols-outlined text-[20px]">credit_card</span>
-                      Bank Card
-                    </button>
-                  </div>
-                </div>
-
-                <div className="pt-2">
-                  <div className="flex justify-between text-xs text-[#7b7486] mb-3">
-                    <span>Total Amount</span>
-                    <span className="font-bold text-[#121c2a]">MWK {total.toLocaleString()}</span>
-                  </div>
-                  <button
-                    type="submit"
-                    className="w-full bg-[#5300b7] hover:bg-[#6d28d9] text-white py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-lg flex items-center justify-center gap-2"
-                  >
-                    Confirm &amp; Pay MWK {total.toLocaleString()}
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
+        <OrderMethodsModal
+          cartItems={cartItems}
+          discount={discount}
+          onClose={() => setIsCheckoutOpen(false)}
+          onSelectMethod={(prod, method, customMsg) => {
+            if (onConfirmCartOrder) {
+              onConfirmCartOrder(prod, method, customMsg);
+            }
+            onClearCart();
+            setIsCheckoutOpen(false);
+          }}
+        />
       )}
     </div>
   );

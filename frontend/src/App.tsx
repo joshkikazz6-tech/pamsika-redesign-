@@ -13,10 +13,12 @@ import { SellerHubView } from './components/SellerHubView';
 import { AdminView } from './components/AdminView';
 import { SettingsView } from './components/SettingsView';
 import { OrderMethodsModal } from './components/OrderMethodsModal';
+import { ProductDetailModal } from './components/ProductDetailModal';
 import { Toast } from './components/Toast';
 import { AuthModal } from './components/AuthModal';
 import { useAuth } from './context/AuthContext';
 import { Api, ApiError } from './lib/api';
+import { trackProductView } from './lib/recommendationEngine';
 import {
   adaptProducts,
   adaptCart,
@@ -30,7 +32,7 @@ import {
   adaptDoloData,
 } from './lib/adapters';
 
-import { Product, CartItem, ChatConversation, CommunityPost, OrderItem, SellerProfile, PendingProductApproval, DoloAffiliate } from './types';
+import { Product, CartItem, ChatConversation, CommunityPost, PostComment, OrderItem, SellerProfile, PendingProductApproval, DoloAffiliate } from './types';
 
 interface AdminStats {
   total_products: number;
@@ -43,18 +45,11 @@ interface AdminStats {
   total_revenue: number;
 }
 
-interface AdminWithdrawalItem {
-  id: string;
-  amount: number;
-  method: string;
-  status: string;
-  user_name?: string;
-}
-
 const EMPTY_DOLO: DoloAffiliate = {
   id: '', name: '', email: '', doloId: '', balance: 0, linkClicks: 0,
   salesMade: 0, totalEarned: 0, inviteLink: '', subEarnings: 0, subInvites: 0,
 };
+
 
 export default function App() {
   const { user, requireAuth } = useAuth();
@@ -64,6 +59,28 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('All');
   const [selectedConvId, setSelectedConvId] = useState<string>('');
+
+  // Dark Mode Theme State (kept local — the new frontend dropped ThemeContext
+  // in favour of a plain boolean + localStorage flag on <html class="dark">)
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    return localStorage.getItem('pamsika_theme') === 'dark';
+  });
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
+
+  const handleToggleDarkMode = () => {
+    setIsDarkMode((prev) => {
+      const next = !prev;
+      localStorage.setItem('pamsika_theme', next ? 'dark' : 'light');
+      return next;
+    });
+  };
 
   // Core Dynamic Data State — populated from the backend, not mock files
   const [products, setProducts] = useState<Product[]>([]);
@@ -85,10 +102,11 @@ export default function App() {
   const [sellers, setSellers] = useState<SellerProfile[]>([]);
   const [pendingApprovals, setPendingApprovals] = useState<PendingProductApproval[]>([]);
   const [adminStats, setAdminStats] = useState<AdminStats | null>(null);
-  const [adminWithdrawals, setAdminWithdrawals] = useState<AdminWithdrawalItem[]>([]);
 
-  // Order Methods Modal State
+  // Order Methods & Detail Modal State
   const [orderModalProduct, setOrderModalProduct] = useState<Product | null>(null);
+  const [orderModalCart, setOrderModalCart] = useState<boolean>(false);
+  const [selectedDetailProduct, setSelectedDetailProduct] = useState<Product | null>(null);
 
   // Toast feedback
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -178,26 +196,16 @@ export default function App() {
   const loadAdminData = useCallback(async () => {
     if (!user?.is_admin) return;
     try {
-      const [stats, ords, sellerList, pending, withdrawals] = await Promise.all([
+      const [stats, ords, sellerList, pending] = await Promise.all([
         Api.adminStats(),
         Api.adminOrders({ per_page: 100 }),
         Api.adminSellers(),
         Api.adminSellerProducts('pending'),
-        Api.adminWithdrawals(),
       ]);
       setAdminStats(stats);
       setAdminOrdersList(adaptOrders(ords));
       setSellers(adaptSellerProfiles(sellerList));
       setPendingApprovals(adaptPendingApprovals(pending));
-      setAdminWithdrawals(
-        (withdrawals || []).map((w: any) => ({
-          id: String(w.id),
-          amount: w.amount,
-          method: w.method,
-          status: w.status,
-          user_name: w.affiliate_email || 'User',
-        }))
-      );
     } catch (err) {
       console.error('Failed to load admin data', err);
     }
@@ -252,9 +260,23 @@ export default function App() {
       setSellers([]);
       setPendingApprovals([]);
       setAdminStats(null);
-      setAdminWithdrawals([]);
     }
   }, [user, loadAdminData]);
+
+  // Auto-trace product when opening app via shared product link (e.g. ?product=prod-1)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const productId = params.get('product');
+    if (productId && products.length > 0) {
+      const target = products.find((p) => p.id === productId);
+      if (target) {
+        trackProductView(target);
+        setSelectedDetailProduct(target);
+        showToast(`Traced shared product: "${target.name}"`);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products]);
 
   // ── Navigation ────────────────────────────────────────────────────────────
 
@@ -325,16 +347,11 @@ export default function App() {
     }
   };
 
-  const handleCheckout = async (
-    paymentMethod: string,
-    contactInfo: { name: string; phone: string; address: string }
-  ) => {
-    if (cart.length === 0) throw new Error('Your cart is empty');
-    const items = cart.map((c) => ({ product_id: c.product.id, quantity: c.quantity }));
-    await Api.createDirectOrder(items, paymentMethod, contactInfo);
-    await Api.clearCart();
-    setCart([]);
-    if (user) loadSellerData(); // in case the user is also a seller who just sold something
+  // View tracking + detail modal preview (view counts are a client-side-only
+  // affordance — the backend has no "increment views" endpoint to persist to)
+  const handleViewProduct = (product: Product) => {
+    trackProductView(product);
+    setSelectedDetailProduct(product);
   };
 
   // ── Wishlist ──────────────────────────────────────────────────────────────
@@ -355,30 +372,67 @@ export default function App() {
     }
   };
 
-  // ── "Order Now" quick-order → logs an inbox inquiry with Admin ──────────
+  // ── "Order Now" / cart checkout → real order + admin inbox message ───────
 
   const handleOrderNow = (product: Product) => {
+    setOrderModalCart(false);
     setOrderModalProduct(product);
   };
 
-  const handleConfirmOrderMethod = async (
-    product: Product,
-    method: 'whatsapp' | 'facebook' | 'email' | 'pamsika'
-  ) => {
-    const subject = `Order Inquiry: ${product.name}`;
-    const message = `Hello Admin, I would like to place an order for: ${product.name} (MWK ${product.price.toLocaleString()}). Selected contact method: ${method.toUpperCase()}. Please assist with availability and delivery.`;
+  const handleOpenCartCheckout = () => {
+    setOrderModalProduct(null);
+    setOrderModalCart(true);
+  };
 
+  const CHECKOUT_METHOD_MAP: Record<string, 'whatsapp' | 'email' | 'messenger'> = {
+    whatsapp: 'whatsapp',
+    facebook: 'messenger',
+    email: 'email',
+    pamsika: 'whatsapp',
+  };
+
+  const handleConfirmOrderMethod = async (
+    product: Product | null,
+    method: 'whatsapp' | 'facebook' | 'email' | 'pamsika',
+    customMsg?: string
+  ) => {
     try {
-      if (user) {
-        const res = await Api.startConversation(null, subject, message);
-        await loadConversations();
-        setSelectedConvId(res.conversation_id);
-        setCurrentView('chat');
+      if (product) {
+        // Single "Order Now" inquiry — logged as a real conversation with admin.
+        const subject = `Order Inquiry: ${product.name}`;
+        const message =
+          customMsg ||
+          `Hello Admin, I would like to place an order for: ${product.name} (MWK ${product.price.toLocaleString()}). Selected contact method: ${method.toUpperCase()}. Please assist with availability and delivery.`;
+        if (user) {
+          const res = await Api.startConversation(null, subject, message);
+          await loadConversations();
+          setSelectedConvId(res.conversation_id);
+        }
+        showToast('Order inquiry sent — our team will follow up shortly!');
+      } else {
+        // Cart checkout — creates a real order from the cart.
+        const ok = user || (await requireAuth());
+        if (!ok) return;
+        await Api.createOrderFromCart(CHECKOUT_METHOD_MAP[method] || 'whatsapp', {
+          name: user?.full_name || 'Customer',
+        });
+        setCart([]);
+        loadSellerData();
+        if (customMsg) {
+          try {
+            await Api.startConversation(null, 'Cart Checkout', customMsg);
+            await loadConversations();
+          } catch {
+            /* order already placed either way — inbox message is best-effort */
+          }
+        }
+        showToast('Order placed successfully!');
       }
-      await handleAddToCart(product);
-      showToast('Order inquiry sent — our team will follow up shortly!');
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : 'Could not send order inquiry');
+      showToast(err instanceof ApiError ? err.message : 'Could not process order');
+    } finally {
+      setOrderModalProduct(null);
+      setOrderModalCart(false);
     }
   };
 
@@ -413,7 +467,47 @@ export default function App() {
     }
   };
 
-  const handleCreatePost = async (content: string, _categoryTag?: string, image?: string) => {
+  const handleAddComment = async (postId: string, text: string) => {
+    if (!text.trim()) return;
+    const ok = await requireAuth();
+    if (!ok) return;
+    try {
+      await Api.addComment(postId, text.trim());
+      await loadPosts();
+      showToast('Comment posted!');
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not post comment');
+    }
+  };
+
+  // The backend doesn't persist per-comment likes (see CHANGES.md), so this
+  // is a client-side-only affordance that resets on reload.
+  const handleToggleLikeComment = (postId: string, commentId: string) => {
+    setPosts((prev) =>
+      prev.map((p) => {
+        if (p.id === postId && p.comments) {
+          const updatedComments = p.comments.map((c) =>
+            c.id === commentId
+              ? { ...c, isLiked: !c.isLiked, likes: c.isLiked ? Math.max(0, (c.likes || 1) - 1) : (c.likes || 0) + 1 }
+              : c
+          );
+          return { ...p, comments: updatedComments };
+        }
+        return p;
+      })
+    );
+  };
+
+  const handleDeleteComment = async (postId: string, commentId: string) => {
+    try {
+      await Api.deleteComment(postId, commentId);
+      await loadPosts();
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not delete comment');
+    }
+  };
+
+  const handleCreatePost = async (content: string, image?: string) => {
     const ok = await requireAuth();
     if (!ok) return;
     try {
@@ -424,72 +518,141 @@ export default function App() {
     }
   };
 
+  // Admin broadcast posts: content + image persist to the backend like any
+  // post. categoryTag/taggedProduct aren't in the backend's post schema
+  // (see CHANGES.md), so they're attached client-side to the just-created
+  // post for this session only rather than guessed at / faked as persisted.
+  const handleCreateAdminPost = async (
+    content: string,
+    categoryTag?: string,
+    image?: string,
+    taggedProduct?: Product
+  ) => {
+    const ok = await requireAuth();
+    if (!ok) return;
+    try {
+      await Api.createPost(content, image ? [image] : []);
+      const res = await Api.getPosts();
+      const adapted = adaptPosts(res, user?.id);
+      if (adapted.length > 0) {
+        adapted[0] = { ...adapted[0], isAdminPost: true, categoryTag, taggedProduct };
+      }
+      setPosts(adapted);
+      showToast('Official Admin Broadcast published to Feed!');
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not publish broadcast');
+    }
+  };
+
   // ── Seller operations ─────────────────────────────────────────────────────
 
-  const handleAddSellerProduct = async (data: {
-    name: string;
-    category: string;
-    price: number;
-    stock: number;
-    description: string;
-  }) => {
+  const handleAddSellerProduct = async (data: Omit<Product, 'id'>) => {
     const ok = await requireAuth();
-    if (!ok) throw new Error('Please sign in first');
-    await Api.sellerSubmitProduct(data);
-    await loadSellerData();
+    if (!ok) {
+      showToast('Please sign in first');
+      return;
+    }
+    try {
+      await Api.sellerSubmitProduct({
+        name: data.name,
+        category: data.category,
+        description: data.description || '',
+        price: data.price,
+        stock: data.stock ?? 0,
+        images: data.images && data.images.length > 0 ? data.images : [data.image],
+      });
+      await loadSellerData();
+      showToast('New product submitted for admin approval!');
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not submit product');
+    }
   };
 
   const handleSellerApply = async (data: {
-    business: string;
+    fullName: string;
+    nationalId: string;
     phone: string;
     location: string;
-    nid: string;
-    description: string;
+    storeName: string;
+    productsSummary: string;
   }) => {
     const ok = await requireAuth();
-    if (!ok) throw new Error('Please sign in first');
-    await Api.sellerApply(data);
-    // seller_status on the user record changes server-side; a fresh /auth/me
-    // pull happens automatically the next time AuthContext refreshes, but we
-    // nudge a reload here so the UI reflects "pending" immediately.
-    window.location.reload();
+    if (!ok) {
+      showToast('Please sign in first');
+      return;
+    }
+    try {
+      await Api.sellerApply({
+        business: data.storeName,
+        phone: data.phone,
+        location: data.location,
+        nid: data.nationalId,
+        description: data.productsSummary,
+      });
+      showToast('Application submitted! Awaiting admin approval.');
+      window.location.reload(); // pulls fresh seller_status from /auth/me
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not submit application');
+    }
   };
 
-  const handleSellerWithdraw = async (amount: number) => {
+  const handleSellerWithdraw = async (amount: number, method: string, details: Record<string, any>) => {
     const ok = await requireAuth();
-    if (!ok) throw new Error('Please sign in first');
-    await Api.sellerRequestPayout(amount, 'mobile_money', {});
-    await loadSellerData();
+    if (!ok) {
+      showToast('Please sign in first');
+      return;
+    }
+    try {
+      await Api.sellerRequestPayout(amount, method, details);
+      await loadSellerData();
+      showToast('Payout request submitted!');
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not request payout');
+    }
   };
 
   // ── Dolo / Affiliate operations ──────────────────────────────────────────
 
   const handleDoloJoin = async () => {
     const ok = await requireAuth();
-    if (!ok) throw new Error('Please sign in first');
-    await Api.joinAffiliate();
-    window.location.reload(); // refresh user.is_affiliate from a clean /auth/me
+    if (!ok) {
+      showToast('Please sign in first');
+      return;
+    }
+    try {
+      await Api.joinAffiliate();
+      window.location.reload(); // refresh user.is_affiliate from a clean /auth/me
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not join Dolo');
+    }
   };
 
   const WITHDRAW_METHOD_MAP: Record<string, 'bank' | 'mobile_money' | 'wallet'> = {
     'Airtel Money': 'mobile_money',
     'TNM Mpamba': 'mobile_money',
-    'National Bank Account': 'bank',
   };
 
-  const handleDoloWithdraw = async (amount: number, methodLabel: string) => {
+  const handleDoloWithdraw = async (amount: number, methodLabel: string, details: Record<string, any>) => {
     const ok = await requireAuth();
-    if (!ok) throw new Error('Please sign in first');
-    const method = WITHDRAW_METHOD_MAP[methodLabel] || 'mobile_money';
-    await Api.requestAffiliateWithdrawal(amount, method, { label: methodLabel });
-    await loadDoloData();
+    if (!ok) {
+      showToast('Please sign in first');
+      return;
+    }
+    const method = WITHDRAW_METHOD_MAP[methodLabel] || (methodLabel.toLowerCase().includes('bank') ? 'bank' : 'mobile_money');
+    try {
+      await Api.requestAffiliateWithdrawal(amount, method, { label: methodLabel, ...details });
+      await loadDoloData();
+      showToast('Payout request submitted!');
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not request payout');
+    }
   };
 
   // ── Admin operations ──────────────────────────────────────────────────────
 
-  const handleApproveProduct = async (approvalId: string, markupPct: number, commPct: number) => {
+  const handleApproveProduct = async (approvalId: string) => {
     try {
-      await Api.adminApproveProduct(approvalId, markupPct, commPct);
+      await Api.adminApproveProduct(approvalId, 30, 5);
       await loadAdminData();
       await loadProducts();
     } catch (err) {
@@ -533,27 +696,54 @@ export default function App() {
     }
   };
 
-  const handleExportOrders = () => {
-    Api.exportOrders('csv').catch((err) =>
-      showToast(err instanceof ApiError ? err.message : 'Export failed')
-    );
-  };
+  const VALID_ADMIN_BADGES = new Set(['HOT', 'NEW']);
 
-  const handleBroadcast = async (title: string, body: string) => {
+  const handleAdminAddProduct = async (data: Omit<Product, 'id'>) => {
     try {
-      await Api.broadcastNotification(title, body);
-      showToast('Broadcast sent to all active users!');
+      await Api.adminCreateProduct({
+        name: data.name,
+        description: data.description || '',
+        price: data.price,
+        category: data.category,
+        images: data.images && data.images.length > 0 ? data.images : [data.image],
+        commission_percent: data.commission ?? 5,
+        badge: data.badge && VALID_ADMIN_BADGES.has(data.badge) ? data.badge : undefined,
+      });
+      await loadProducts();
+      showToast('Product created and published!');
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : 'Broadcast failed');
+      showToast(err instanceof ApiError ? err.message : 'Could not create product');
     }
   };
 
-  const handleApproveWithdrawal = async (id: string) => {
+  const handleAdminEditProduct = async (updatedProduct: Product) => {
     try {
-      await Api.adminApproveWithdrawal(id);
-      await loadAdminData();
+      await Api.adminUpdateProduct(updatedProduct.id, {
+        name: updatedProduct.name,
+        description: updatedProduct.description,
+        price: updatedProduct.price,
+        category: updatedProduct.category,
+        images:
+          updatedProduct.images && updatedProduct.images.length > 0
+            ? updatedProduct.images
+            : [updatedProduct.image],
+        commission_percent: updatedProduct.commission,
+        badge: updatedProduct.badge && VALID_ADMIN_BADGES.has(updatedProduct.badge) ? updatedProduct.badge : null,
+      });
+      await loadProducts();
+      showToast('Product updated!');
     } catch (err) {
-      showToast(err instanceof ApiError ? err.message : 'Could not approve withdrawal');
+      showToast(err instanceof ApiError ? err.message : 'Could not update product');
+    }
+  };
+
+  const handleAdminDeleteProduct = async (productId: string) => {
+    try {
+      await Api.adminDeleteProduct(productId);
+      await loadProducts();
+      showToast('Product deleted!');
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not delete product');
     }
   };
 
@@ -567,7 +757,7 @@ export default function App() {
     : ((user.seller_status as any) || 'none');
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#fbf8ff] text-[#1a1b22]">
+    <div className={`min-h-screen flex flex-col transition-colors duration-300 ${isDarkMode ? 'dark bg-[#0c0814] text-slate-100' : 'bg-[#fbf8ff] text-[#1a1b22]'}`}>
       {/* Show Global Header unless in full chat mode or admin view */}
       {currentView !== 'chat' && currentView !== 'admin' && (
         <Header
@@ -579,6 +769,8 @@ export default function App() {
           onSearchChange={setSearchQuery}
           cartCount={totalCartCount}
           unreadMessagesCount={unreadMessagesCount}
+          isDarkMode={isDarkMode}
+          onToggleDarkMode={handleToggleDarkMode}
         />
       )}
 
@@ -598,6 +790,7 @@ export default function App() {
             searchQuery={searchQuery}
             onShowToast={showToast}
             onOrderNow={handleOrderNow}
+            onViewProduct={handleViewProduct}
           />
         )}
 
@@ -610,6 +803,7 @@ export default function App() {
             onAddToCart={handleAddToCart}
             onShowToast={showToast}
             onOrderNow={handleOrderNow}
+            onViewProduct={handleViewProduct}
           />
         )}
 
@@ -621,7 +815,7 @@ export default function App() {
             onClearCart={handleClearCart}
             onNavigate={handleNavigate}
             onShowToast={showToast}
-            onCheckout={handleCheckout}
+            onConfirmCartOrder={handleConfirmOrderMethod}
           />
         )}
 
@@ -634,15 +828,23 @@ export default function App() {
             onNavigate={handleNavigate}
             onShowToast={showToast}
             onOrderNow={handleOrderNow}
+            onViewProduct={handleViewProduct}
           />
         )}
 
         {currentView === 'community' && (
           <CommunityView
             posts={posts}
+            products={products}
+            registeredUserName={user?.full_name || 'Guest'}
             onToggleLike={handleToggleLikePost}
-            onCreatePost={handleCreatePost}
+            onAddComment={handleAddComment}
+            onToggleLikeComment={handleToggleLikeComment}
+            onDeleteComment={handleDeleteComment}
+            onCreateAdminPost={user?.is_admin ? handleCreateAdminPost : undefined}
             onShowToast={showToast}
+            onViewProduct={handleViewProduct}
+            onOrderNow={handleOrderNow}
           />
         )}
 
@@ -691,19 +893,18 @@ export default function App() {
 
         {currentView === 'admin' && (
           <AdminView
+            products={products}
             orders={adminOrdersList}
             sellers={sellers}
             pendingApprovals={pendingApprovals}
-            stats={adminStats}
-            withdrawals={adminWithdrawals}
             onApproveProduct={handleApproveProduct}
             onRejectProduct={handleRejectProduct}
             onToggleOrderDone={handleToggleOrderDone}
             onCancelOrder={handleCancelOrder}
             onToggleSellerStatus={handleToggleSellerStatus}
-            onExportOrders={handleExportOrders}
-            onBroadcast={handleBroadcast}
-            onApproveWithdrawal={handleApproveWithdrawal}
+            onAddProduct={handleAdminAddProduct}
+            onEditProduct={handleAdminEditProduct}
+            onDeleteProduct={handleAdminDeleteProduct}
             onShowToast={showToast}
             onNavigate={handleNavigate}
           />
@@ -715,15 +916,36 @@ export default function App() {
             onSelectCity={setCurrentCity}
             onNavigate={handleNavigate}
             onShowToast={showToast}
+            isDarkMode={isDarkMode}
+            onToggleDarkMode={handleToggleDarkMode}
           />
         )}
       </main>
 
-      {/* Order Methods Modal */}
+      {/* Order Methods Modal — single-product "Order Now" or full-cart checkout */}
       <OrderMethodsModal
         product={orderModalProduct}
-        onClose={() => setOrderModalProduct(null)}
+        cartItems={orderModalCart ? cart : null}
+        onClose={() => {
+          setOrderModalProduct(null);
+          setOrderModalCart(false);
+        }}
         onSelectMethod={handleConfirmOrderMethod}
+      />
+
+      {/* Global Product Detail Modal */}
+      <ProductDetailModal
+        product={
+          selectedDetailProduct
+            ? products.find((p) => p.id === selectedDetailProduct.id) || selectedDetailProduct
+            : null
+        }
+        onClose={() => setSelectedDetailProduct(null)}
+        onAddToCart={handleAddToCart}
+        onToggleWishlist={handleToggleWishlist}
+        isWishlisted={selectedDetailProduct ? wishlistIds.includes(selectedDetailProduct.id) : false}
+        onShowToast={showToast}
+        onOrderNow={handleOrderNow}
       />
 
       {/* Auth Modal (login / register) */}

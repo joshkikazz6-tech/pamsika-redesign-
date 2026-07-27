@@ -4,7 +4,7 @@
    keeps working exactly as designed with zero prop-shape changes.
    ================================================================ */
 
-import { Product, OrderItem, CommunityPost, ChatConversation, ChatMessage, CartItem, SellerProfile, PendingProductApproval, DoloAffiliate } from '../types';
+import { Product, OrderItem, CommunityPost, PostComment, ChatConversation, ChatMessage, CartItem, SellerProfile, PendingProductApproval, DoloAffiliate } from '../types';
 
 const FALLBACK_IMAGE =
   'https://lh3.googleusercontent.com/aida-public/AB6AXuDDAPWiWV47AkKi7TwwOsVy43l182AI4vQca9vjMVLJVE225ahupJyce9rn8uqsezfDgz5R06Qd6ggSv8sXW_jOW3X3KExIBZWmR3bXgQgmj6B4zinsycLYSTD47jRUK-LuALvBgf82ym38JF2r5R_Uvbhsay-VbR_M66b5dJ3J9b2WlUdk99odno1iOdfsb2Q0KSlF_v71BrwAjfxAGLYKpcQDyJf2ps2vcAv51JaYyx-0EcPTLgEIt_Xeajv2p9WRAd8xZRHU9wA';
@@ -81,6 +81,21 @@ export function adaptOrders(list: any[]): OrderItem[] {
 
 // ── Community ─────────────────────────────────────────────────────────────
 
+function adaptComment(c: any): PostComment {
+  return {
+    id: String(c.id),
+    authorName: c.author || 'User',
+    authorAvatar: FALLBACK_IMAGE,
+    authorBadge: undefined,
+    timestamp: c.created_at ? new Date(c.created_at).toLocaleString() : 'Just now',
+    text: c.content,
+    // The backend doesn't persist per-comment likes, so this is a
+    // client-side-only affordance (see CHANGES.md — "Known scope limits").
+    likes: 0,
+    isLiked: false,
+  };
+}
+
 export function adaptPost(p: any, currentUserId?: string): CommunityPost {
   return {
     id: String(p.id),
@@ -94,6 +109,11 @@ export function adaptPost(p: any, currentUserId?: string): CommunityPost {
     likes: p.likes ?? 0,
     isLiked: currentUserId ? (p.liked_by_ids || []).includes(currentUserId) : false,
     commentsCount: (p.comments || []).length,
+    comments: (p.comments || []).map(adaptComment),
+    // Tagged-product posts and an "admin post" flag aren't in the backend's
+    // post schema yet (see CHANGES.md); left undefined rather than guessed.
+    isAdminPost: undefined,
+    taggedProduct: undefined,
   };
 }
 

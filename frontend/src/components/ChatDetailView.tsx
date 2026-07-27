@@ -117,11 +117,11 @@ export const ChatDetailView: React.FC<ChatDetailViewProps> = ({
               <div
                 className={`p-3.5 rounded-2xl text-sm leading-relaxed shadow-sm ${
                   isUser
-                    ? 'bg-[#5300b7] text-white rounded-tr-none'
-                    : 'bg-[#d9e3f6] text-[#121c2a] rounded-tl-none'
+                    ? 'bg-slate-900 text-white dark:bg-white dark:text-black rounded-tr-none'
+                    : 'bg-slate-200 text-slate-900 dark:bg-zinc-800 dark:text-white rounded-tl-none'
                 }`}
               >
-                <p>{msg.text}</p>
+                <p className="whitespace-pre-wrap break-words">{msg.text}</p>
               </div>
 
               <div className="flex items-center gap-1 text-[10px] text-[#7b7486] px-1">

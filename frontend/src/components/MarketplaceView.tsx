@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Product } from '../types';
 import { ProductDetailModal } from './ProductDetailModal';
+import { SmartRecommendationFeed } from './SmartRecommendationFeed';
+import { trackProductView } from '../lib/recommendationEngine';
 
 interface MarketplaceViewProps {
   products: Product[];
@@ -10,6 +12,7 @@ interface MarketplaceViewProps {
   onAddToCart: (product: Product) => void;
   onShowToast: (msg: string) => void;
   onOrderNow?: (product: Product) => void;
+  onViewProduct?: (product: Product) => void;
 }
 
 export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
@@ -20,9 +23,14 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
   onAddToCart,
   onShowToast,
   onOrderNow,
+  onViewProduct,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory || 'All');
   const [selectedProductModal, setSelectedProductModal] = useState<Product | null>(null);
+
+  const activeModalProduct = selectedProductModal
+    ? products.find((p) => p.id === selectedProductModal.id) || selectedProductModal
+    : null;
 
   const categories = ['All', 'Footwear', 'Fashion', 'Luxury Bags', 'Timepieces', 'Electronics', 'Automobiles', 'Home Decor'];
 
@@ -72,10 +80,10 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`px-5 py-2 rounded-full font-semibold text-xs whitespace-nowrap transition-all shadow-sm ${
+              className={`px-5 py-2 rounded-full font-semibold text-xs whitespace-nowrap transition-all shadow-sm cursor-pointer ${
                 isSelected
                   ? 'bg-[#6d28d9] text-white shadow-purple-500/20 shadow-md'
-                  : 'bg-[#eeedf7] text-[#4a4455] hover:text-[#6d28d9]'
+                  : 'bg-[#eeedf7] dark:bg-zinc-900 text-[#4a4455] dark:text-zinc-200 hover:text-[#6d28d9] dark:hover:text-white'
               }`}
             >
               {cat === 'All' ? 'All Collections' : cat}
@@ -95,7 +103,14 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
             >
               {/* Image Header - Clickable for Full Screen Gallery View */}
               <div
-                onClick={() => setSelectedProductModal(product)}
+                onClick={() => {
+                  if (onViewProduct) {
+                    onViewProduct(product);
+                  } else {
+                    trackProductView(product);
+                  }
+                  setSelectedProductModal(product);
+                }}
                 className="relative aspect-square w-full overflow-hidden bg-[#e8e7f1] cursor-pointer group/img"
                 title="Click image to open full screen photo gallery"
               >
@@ -119,7 +134,7 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
                     e.stopPropagation();
                     onToggleWishlist(product.id);
                   }}
-                  className="absolute top-4 right-4 w-9 h-9 bg-white/70 backdrop-blur-md rounded-full flex items-center justify-center text-[#1a1b22] hover:text-[#6d28d9] transition-colors shadow-sm cursor-pointer z-10"
+                  className="absolute top-4 right-4 w-9 h-9 bg-white/70 dark:bg-black/80 backdrop-blur-md rounded-full flex items-center justify-center text-[#1a1b22] dark:text-white hover:text-[#6d28d9] transition-colors shadow-sm cursor-pointer z-10"
                 >
                   <span
                     className={`material-symbols-outlined text-[20px] ${
@@ -148,11 +163,13 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
                   <div className="flex gap-3 items-center text-[#4a4455] text-xs">
                     <div className="flex items-center gap-1">
                       <span className="material-symbols-outlined text-[15px]">visibility</span>
-                      <span>{product.viewsCount || 850}</span>
+                      <span>{(product.viewsCount ?? 0).toLocaleString()}</span>
                     </div>
                     <div className="flex items-center gap-1 text-[#059669]">
                       <span className="material-symbols-outlined text-[15px]">payments</span>
-                      <span>{product.commission || 5}% Comm.</span>
+                      <span>
+                        MWK {Math.round((product.price * (product.commission || 5)) / 100).toLocaleString()} ({product.commission || 5}%)
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -186,8 +203,15 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
                 {/* Secondary Quick Utilities */}
                 <div className="flex justify-between items-center pt-3 border-t border-[#ccc3d7]/30 text-xs text-[#4a4455]">
                   <button
-                    onClick={() => setSelectedProductModal(product)}
-                    className="flex items-center gap-1 font-semibold hover:text-[#6d28d9] transition-colors"
+                    onClick={() => {
+                      if (onViewProduct) {
+                        onViewProduct(product);
+                      } else {
+                        trackProductView(product);
+                      }
+                      setSelectedProductModal(product);
+                    }}
+                    className="flex items-center gap-1 font-semibold hover:text-[#6d28d9] transition-colors cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-[16px]">info</span> VIEW
                   </button>
@@ -211,9 +235,34 @@ export const MarketplaceView: React.FC<MarketplaceViewProps> = ({
         })}
       </div>
 
+      {/* Algorithmic Smart Recommendation Feed */}
+      <SmartRecommendationFeed
+        products={products}
+        wishlistIds={wishlistIds}
+        cartProductIds={[]}
+        onAddToCart={onAddToCart}
+        onToggleWishlist={onToggleWishlist}
+        onSelectProduct={(p) => {
+          if (onViewProduct) {
+            onViewProduct(p);
+          } else {
+            trackProductView(p);
+          }
+          setSelectedProductModal(p);
+        }}
+        onOrderNow={(p) => {
+          if (onOrderNow) {
+            onOrderNow(p);
+          } else {
+            onAddToCart(p);
+          }
+        }}
+        onShowToast={onShowToast}
+      />
+
       {/* Full-Screen Product Detail Modal */}
       <ProductDetailModal
-        product={selectedProductModal}
+        product={activeModalProduct}
         onClose={() => setSelectedProductModal(null)}
         onAddToCart={onAddToCart}
         onToggleWishlist={onToggleWishlist}

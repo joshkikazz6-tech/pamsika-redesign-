@@ -274,7 +274,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 <span>•</span>
                 <div className="flex items-center gap-1">
                   <span className="material-symbols-outlined text-[16px]">visibility</span>
-                  <span>{product.viewsCount || 850} Views</span>
+                  <span>{(product.viewsCount ?? 0).toLocaleString()} Views</span>
                 </div>
                 <span>•</span>
                 <div className="flex items-center gap-1 text-emerald-600 font-bold">
@@ -299,7 +299,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   Commission
                 </span>
                 <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full inline-block mt-0.5">
-                  {product.commission || 5}% Comm.
+                  MWK {Math.round((product.price * (product.commission || 5)) / 100).toLocaleString()} ({product.commission || 5}%)
                 </span>
               </div>
             </div>

@@ -10,6 +10,7 @@ interface WishlistViewProps {
   onNavigate: (view: string) => void;
   onShowToast: (msg: string) => void;
   onOrderNow?: (product: Product) => void;
+  onViewProduct?: (product: Product) => void;
 }
 
 export const WishlistView: React.FC<WishlistViewProps> = ({
@@ -20,9 +21,14 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
   onNavigate,
   onShowToast,
   onOrderNow,
+  onViewProduct,
 }) => {
   const [selectedProductModal, setSelectedProductModal] = useState<Product | null>(null);
   const wishlistedProducts = products.filter((p) => wishlistIds.includes(p.id));
+
+  const activeModalProduct = selectedProductModal
+    ? products.find((p) => p.id === selectedProductModal.id) || selectedProductModal
+    : null;
 
   const handleShareList = () => {
     navigator.clipboard?.writeText(window.location.href);
@@ -80,7 +86,10 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
             className="group relative flex flex-col bg-[#eeedf7] rounded-2xl overflow-hidden shadow-sm border border-[#ccc3d7]/30"
           >
             <div
-              onClick={() => setSelectedProductModal(product)}
+              onClick={() => {
+                if (onViewProduct) onViewProduct(product);
+                setSelectedProductModal(product);
+              }}
               className="relative aspect-square overflow-hidden bg-[#e8e7f1] cursor-pointer group/img"
               title="Click image to open full screen photo gallery"
             >
@@ -139,7 +148,7 @@ export const WishlistView: React.FC<WishlistViewProps> = ({
 
       {/* Full-Screen Product Detail Modal */}
       <ProductDetailModal
-        product={selectedProductModal}
+        product={activeModalProduct}
         onClose={() => setSelectedProductModal(null)}
         onAddToCart={onAddToCart}
         onToggleWishlist={onToggleWishlist}
