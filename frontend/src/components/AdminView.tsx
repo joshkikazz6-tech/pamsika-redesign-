@@ -333,6 +333,113 @@ export const AdminView: React.FC<AdminViewProps> = ({
     notes: w.admin_note || '',
   })), [realWithdrawals]);
 
+  // ==================== OVERVIEW DASHBOARD (REAL DATA) ====================
+  // Every figure below is derived from real props — nothing here is invented.
+  // Where the data model genuinely doesn't support a metric (e.g. per-product
+  // view-to-purchase conversion), we simply don't show it rather than fabricate one.
+  const [analyticsTimeframe, setAnalyticsTimeframe] = useState<'30d' | '90d' | '1y'>('30d');
+  const overviewStats = useMemo(() => {
+    const activeOrders = orders.filter((o) => o.status !== 'Cancelled');
+    const totalRevenue = activeOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
+    const activeSellersCount = sellers.filter((s) => s.status === 'Active').length;
+    const pendingSellersCount = sellers.filter((s) => s.status === 'Pending').length;
+    const pendingWithdrawalsList = withdrawalsMainList.filter((w: any) => w.status === 'Pending Approval');
+    const pendingWithdrawalsSum = pendingWithdrawalsList.reduce((s: number, w: any) => s + (w.requestedAmount || 0), 0);
+    const totalProductViews = products.reduce((sum, p) => sum + (p.viewsCount || 0), 0);
+    return {
+      totalRevenue,
+      activeSellersCount,
+      pendingSellersCount,
+      pendingWithdrawalsCount: pendingWithdrawalsList.length,
+      pendingWithdrawalsSum,
+      totalProductViews,
+    };
+  }, [orders, sellers, withdrawalsMainList, products]);
+
+  const timeframeDays = analyticsTimeframe === '30d' ? 30 : analyticsTimeframe === '90d' ? 90 : 365;
+
+  const periodStats = useMemo(() => {
+    const now = new Date();
+    const cutoff = new Date(now);
+    cutoff.setDate(cutoff.getDate() - timeframeDays);
+    const prevCutoff = new Date(cutoff);
+    prevCutoff.setDate(prevCutoff.getDate() - timeframeDays);
+
+    const inPeriod = orders.filter((o) => o.status !== 'Cancelled' && o.date && new Date(o.date) >= cutoff);
+    const inPrevPeriod = orders.filter(
+      (o) => o.status !== 'Cancelled' && o.date && new Date(o.date) >= prevCutoff && new Date(o.date) < cutoff
+    );
+
+    const revenue = inPeriod.reduce((s, o) => s + (o.amount || 0), 0);
+    const prevRevenue = inPrevPeriod.reduce((s, o) => s + (o.amount || 0), 0);
+    const revenueChangePct = prevRevenue > 0 ? ((revenue - prevRevenue) / prevRevenue) * 100 : null;
+
+    return { ordersCount: inPeriod.length, revenue, revenueChangePct };
+  }, [orders, timeframeDays]);
+
+  // Real order volume for the last 7 calendar days
+  const dailyOrderCounts = useMemo(() => {
+    const days: { label: string; count: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      const count = orders.filter((o) => o.date === key).length;
+      days.push({ label: d.toLocaleDateString('en-US', { weekday: 'short' }), count });
+    }
+    return days;
+  }, [orders]);
+
+  // Real, most-recent-first alerts derived from actual pending items — no invented activity
+  const recentAlerts = useMemo(() => {
+    const alerts: { icon: string; color: string; title: string; detail: string; date: string }[] = [];
+
+    const latestWithdrawal = [...withdrawalsMainList]
+      .filter((w: any) => w.status === 'Pending Approval')
+      .sort((a: any, b: any) => (b.requestDate || '').localeCompare(a.requestDate || ''))[0];
+    if (latestWithdrawal) {
+      alerts.push({
+        icon: 'account_balance_wallet',
+        color: '#ba1a1a',
+        title: 'New Withdrawal Request',
+        detail: `MWK ${(latestWithdrawal.requestedAmount || 0).toLocaleString()} from ${latestWithdrawal.requesterName}`,
+        date: latestWithdrawal.requestDate || '',
+      });
+    }
+
+    const latestSellerApp = sellers.find((s) => s.status === 'Pending');
+    if (latestSellerApp) {
+      alerts.push({
+        icon: 'storefront',
+        color: '#5300b7',
+        title: 'Seller Application',
+        detail: `"${latestSellerApp.storeName}" is requesting access`,
+        date: '',
+      });
+    }
+
+    const latestApproval = pendingApprovals[0];
+    if (latestApproval) {
+      alerts.push({
+        icon: 'inventory_2',
+        color: '#7b7486',
+        title: 'Product Awaiting Approval',
+        detail: `"${latestApproval.productName}" from ${latestApproval.sellerName}`,
+        date: latestApproval.submittedTime || '',
+      });
+    }
+
+    return alerts;
+  }, [withdrawalsMainList, sellers, pendingApprovals]);
+
+  // Real top products by view engagement — no fabricated conversion rates
+  const topViewedProducts = useMemo(() => {
+    return [...products]
+      .filter((p) => (p.viewsCount || 0) > 0)
+      .sort((a, b) => (b.viewsCount || 0) - (a.viewsCount || 0))
+      .slice(0, 4);
+  }, [products]);
+
   // ==================== WITHDRAWALS STATE ====================
   const [withdrawalsSearch, setWithdrawalsSearch] = useState('');
   const [withdrawalsTypeFilter, setWithdrawalsTypeFilter] = useState<'ALL' | 'Seller' | 'Affiliate'>('ALL');
@@ -538,9 +645,6 @@ export const AdminView: React.FC<AdminViewProps> = ({
     onShowToast('Conversation deleted.');
   };
 
-  // Business Analytics timeframe state
-  const [analyticsTimeframe, setAnalyticsTimeframe] = useState<'30d' | '90d' | '1y'>('30d');
-
   // Notifications Toggle & List State
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notificationsList, setNotificationsList] = useState([
@@ -597,57 +701,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
     }));
   };
 
-  // Sample extended approval items matching the design images if pendingApprovals is low
-  const displayApprovals: PendingProductApproval[] = pendingApprovals.length > 0
-    ? pendingApprovals
-    : [
-        {
-          id: 'appr-1',
-          productName: 'The Heritage Bifold – Cognac',
-          category: 'Fashion & Acc.',
-          sellerName: 'Aiden Craftworks',
-          sellerPrice: 45.00,
-          stock: 150,
-          submittedTime: '2h ago',
-          description: 'Full-grain vegetable tanned leather bifold wallet with RFID blocking technology. Hand-stitched with waxed thread.',
-          images: [
-            'https://lh3.googleusercontent.com/aida-public/AB6AXuD_e_tqTx0_D8kvJ1y2RnvSDhjpIoiZrlpH-gAMlUQPs-uLHDGDGU7I-jovUbgUplxvVoQ42N6jWXDCmMeXd_rQP5Yuw5FXb98X8-HZlBRMYcFb5XfKcb7AHH1vR7Z0HGUxSkClf-yUeikqzMGf9w_bjlKPO59G1eMnAgRoGf2PPX_lvOCnHNefofIgH8Wu1P08Albj1LR_oh_x0qpOiev5MI70v2WPgVsm6XKYMymOcChau83-RIfQdYsu-O7OOIN43JSRRPF2o_g',
-            'https://lh3.googleusercontent.com/aida-public/AB6AXuBgQsy4vrovhpndJDvbjGYUQ--LmmDOvPLnaKNimKHc-e25IRDLF5MLPekO7QevMqAnwoEJfzwaURABODtWXybVh7pRWsYto2pIQKlzJCLVyWiBIyFOQaAhYVBB5swAdI7Ur8LKUBfqhkqQmejMQ5iSJ8ab2R-7zO9G9a6peySvoyKBRN81u57tT-hZPr4hYNTDmY6ACkGbes8fSqW7Bi2dJ_e4sNUyF_u6b_sYhnsUY1kj8J6xXlSdrLZGVFLeHkWHvOzdsCx1abQ'
-          ],
-          platformMarkupPct: 25,
-          affiliateCommPct: 10
-        },
-        {
-          id: 'appr-2',
-          productName: 'Apex TKL Mechanical Keyboard',
-          category: 'Tech & Gaming',
-          sellerName: 'Vertex Peripheral Lab',
-          sellerPrice: 120.00,
-          stock: 45,
-          submittedTime: '5h ago',
-          description: 'Wireless mechanical keyboard with hot-swappable switches, PBT keycaps, and custom RGB backlight profiles.',
-          images: [
-            'https://lh3.googleusercontent.com/aida-public/AB6AXuAPCgmIDUWLf_1PEAehr_-Nq5Q8Qp4_H_Z6Et4wGhfCsDPv0hLQ8kJJlgkm3QFf-Z4fCgchv_9Rq3GWOk0WxD93jtEthEX60fGQ8_OfotmQGf_6STUkMn-YoV6Qsc5uxFUeDBuhx3imK_4GFLyZs0z3pMt_kWkvCJWxUfbC6WmAptICzVkAquXI_ek1GlMvPg2nq8IRsLLJsAn10i4Iye3ANBy0njwtFNSfYtPNPQyEnwIrK7Ds63jYLz9eixTGxYKhBREpN_CW3iA'
-          ],
-          platformMarkupPct: 25,
-          affiliateCommPct: 10
-        },
-        {
-          id: 'appr-3',
-          productName: 'Midnight Cedar Soy Candle',
-          category: 'Home Decor',
-          sellerName: 'The Atrium Collection',
-          sellerPrice: 18.00,
-          stock: 500,
-          submittedTime: '12h ago',
-          description: 'Hand-poured 100% natural soy wax candle with essential oils of cedarwood, vetiver, and smoked oak.',
-          images: [
-            'https://lh3.googleusercontent.com/aida-public/AB6AXuCMKVMyCJBpAQvLgOjAdakIaGh9JUkdOqVPBtsiYfj-CtVv8jjlWASBV7pCooQ2ilOKBP13zauZERjiBLOH54kpjChqKgk2zWvfZsUM2JgnuTOV8McgWyuoxZvlcqO_9a8p8JwiZbxcphRAXVbz8HHNYNU1KrLsb5e7QhbvK0gfbvbgjbB80P2znGff8WhjCSrwcH3TOJN7JFxyoRisBkG1H7gcOq-_LfNE3_OnWNnl2GYZviEh1bQNCozsP9hgZvG81SawaSoHuvE'
-          ],
-          platformMarkupPct: 30,
-          affiliateCommPct: 15
-        }
-      ];
+  const displayApprovals: PendingProductApproval[] = pendingApprovals;
 
   const filteredApprovals = displayApprovals.filter((appr) => {
     const matchesSearch =
@@ -1012,11 +1066,13 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     Welcome back, Admin.
                   </h1>
                   <p className="text-xs sm:text-sm text-[#dac5ff] leading-relaxed">
-                    Here's what's happening today. Your ecosystem is growing at a rate of 12% this week. Review pending approvals to maintain marketplace velocity.
+                    {overviewStats.pendingWithdrawalsCount > 0 || displayApprovals.length > 0 || overviewStats.pendingSellersCount > 0
+                      ? `You have ${displayApprovals.length} product approval${displayApprovals.length !== 1 ? 's' : ''}, ${overviewStats.pendingSellersCount} seller application${overviewStats.pendingSellersCount !== 1 ? 's' : ''}, and ${overviewStats.pendingWithdrawalsCount} withdrawal${overviewStats.pendingWithdrawalsCount !== 1 ? 's' : ''} waiting on you.`
+                      : "You're all caught up — no pending approvals, applications, or withdrawals right now."}
                   </p>
                   <div className="flex flex-wrap items-center gap-3 pt-2">
                     <button
-                      onClick={() => onShowToast('Refreshed real-time analytics!')}
+                      onClick={() => onShowToast('Stats refreshed from live data.')}
                       className="bg-white/20 hover:bg-white/30 text-white px-4 py-2.5 rounded-xl font-bold text-xs transition-colors flex items-center gap-2 cursor-pointer backdrop-blur-xs"
                     >
                       <span className="material-symbols-outlined text-[18px]">refresh</span>
@@ -1040,16 +1096,16 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
                 <div className="relative z-10 bg-white/10 backdrop-blur-md p-6 rounded-2xl border border-white/20 text-center min-w-[220px] w-full md:w-auto shrink-0 shadow-lg">
                   <span className="text-xs font-bold text-[#dac5ff] uppercase tracking-widest block mb-1">
-                    GROSS REVENUE
+                    GROSS REVENUE (ALL TIME)
                   </span>
                   <span className="font-serif-source text-3xl font-bold text-white block">
-                    MWK 4.5M
+                    MWK {overviewStats.totalRevenue.toLocaleString()}
                   </span>
-                  <span className="text-[10px] text-[#dac5ff] mt-1 block">+18.2% vs last month</span>
+                  <span className="text-[10px] text-[#dac5ff] mt-1 block">From {orders.filter((o) => o.status !== 'Cancelled').length} completed orders</span>
                 </div>
               </section>
 
-              {/* 8 KPI Grid Cards */}
+              {/* 8 KPI Grid Cards — all real, computed from live data */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* Total Revenue */}
                 <div className="bg-white p-5 rounded-2xl border border-[#ccc3d7]/40 shadow-xs flex flex-col justify-between">
@@ -1057,16 +1113,13 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     <div className="p-2.5 bg-[#f3ebf9] text-[#5300b7] rounded-xl">
                       <span className="material-symbols-outlined text-[20px]">payments</span>
                     </div>
-                    <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                      +18.2%
-                    </span>
                   </div>
                   <div>
                     <span className="text-[10px] font-bold text-[#4a4455] uppercase tracking-wider block">
                       TOTAL REVENUE
                     </span>
                     <span className="font-serif-source text-2xl font-bold text-[#1d1a24]">
-                      MWK 4,500,000
+                      MWK {overviewStats.totalRevenue.toLocaleString()}
                     </span>
                   </div>
                 </div>
@@ -1077,16 +1130,13 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     <div className="p-2.5 bg-[#f3ebf9] text-[#5300b7] rounded-xl">
                       <span className="material-symbols-outlined text-[20px]">group</span>
                     </div>
-                    <span className="text-xs font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">
-                      Growth
-                    </span>
                   </div>
                   <div>
                     <span className="text-[10px] font-bold text-[#4a4455] uppercase tracking-wider block">
                       TOTAL USERS
                     </span>
                     <span className="font-serif-source text-2xl font-bold text-[#1d1a24]">
-                      12,500
+                      {totalUsers.toLocaleString()}
                     </span>
                   </div>
                 </div>
@@ -1103,7 +1153,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       PRODUCTS
                     </span>
                     <span className="font-serif-source text-2xl font-bold text-[#1d1a24]">
-                      1,240
+                      {products.length.toLocaleString()}
                     </span>
                   </div>
                 </div>
@@ -1120,7 +1170,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       ORDERS
                     </span>
                     <span className="font-serif-source text-2xl font-bold text-[#1d1a24]">
-                      850
+                      {orders.length.toLocaleString()}
                     </span>
                   </div>
                 </div>
@@ -1131,16 +1181,18 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     <div className="p-2.5 bg-[#f3ebf9] text-[#5300b7] rounded-xl">
                       <span className="material-symbols-outlined text-[20px]">store</span>
                     </div>
-                    <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
-                      12 PENDING
-                    </span>
+                    {overviewStats.pendingSellersCount > 0 && (
+                      <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+                        {overviewStats.pendingSellersCount} PENDING
+                      </span>
+                    )}
                   </div>
                   <div>
                     <span className="text-[10px] font-bold text-[#4a4455] uppercase tracking-wider block">
                       ACTIVE SELLERS
                     </span>
                     <span className="font-serif-source text-2xl font-bold text-[#1d1a24]">
-                      430
+                      {overviewStats.activeSellersCount.toLocaleString()}
                     </span>
                   </div>
                 </div>
@@ -1157,7 +1209,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       TOTAL AFFILIATES
                     </span>
                     <span className="font-serif-source text-2xl font-bold text-[#1d1a24]">
-                      1,024
+                      {realAffiliates.length.toLocaleString()}
                     </span>
                   </div>
                 </div>
@@ -1174,132 +1226,102 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       PRODUCT APPROVALS
                     </span>
                     <span className="font-serif-source text-2xl font-bold text-[#1d1a24]">
-                      28
+                      {displayApprovals.length.toLocaleString()}
                     </span>
                   </div>
                 </div>
 
                 {/* Pending Withdrawals */}
-                <div className="bg-white p-5 rounded-2xl border border-[#ccc3d7]/40 shadow-xs flex flex-col justify-between border-l-4 border-l-[#ba1a1a]">
+                <div className={`bg-white p-5 rounded-2xl border border-[#ccc3d7]/40 shadow-xs flex flex-col justify-between ${overviewStats.pendingWithdrawalsCount > 0 ? 'border-l-4 border-l-[#ba1a1a]' : ''}`}>
                   <div className="flex justify-between items-start mb-3">
                     <div className="p-2.5 bg-[#ffdad6] text-[#ba1a1a] rounded-xl">
                       <span className="material-symbols-outlined text-[20px]">account_balance_wallet</span>
                     </div>
-                    <span className="text-[10px] font-extrabold text-white bg-[#ba1a1a] px-2 py-0.5 rounded-full uppercase">
-                      URGENT
-                    </span>
+                    {overviewStats.pendingWithdrawalsCount > 0 && (
+                      <span className="text-[10px] font-extrabold text-white bg-[#ba1a1a] px-2 py-0.5 rounded-full uppercase">
+                        URGENT
+                      </span>
+                    )}
                   </div>
                   <div>
                     <span className="text-[10px] font-bold text-[#4a4455] uppercase tracking-wider block">
                       PENDING WITHDRAWALS
                     </span>
                     <span className="font-serif-source text-2xl font-bold text-[#ba1a1a]">
-                      14
+                      {overviewStats.pendingWithdrawalsCount.toLocaleString()}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* System Health & Traffic + Recent Alerts */}
+              {/* Order Volume & Recent Alerts */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Traffic Graph Box */}
+                {/* Real Order Volume Bar Chart (last 7 days) */}
                 <div className="lg:col-span-2 bg-white p-6 rounded-3xl border border-[#ccc3d7]/40 shadow-xs space-y-4">
                   <div className="flex justify-between items-center">
                     <h3 className="font-serif-source text-xl font-bold text-[#1d1a24]">
-                      System Health &amp; Traffic
+                      Order Volume — Last 7 Days
                     </h3>
-                    <div className="flex items-center gap-4 text-xs font-semibold text-[#4a4455]">
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 rounded-full bg-[#5300b7]"></span> Sellers
-                      </span>
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-2.5 h-2.5 rounded-full bg-[#c5c6c8]"></span> Users
-                      </span>
-                    </div>
                   </div>
 
-                  {/* Visual Bar Chart mockup */}
-                  <div className="h-48 flex items-end justify-between gap-2 pt-6 pb-2 px-2 border-b border-[#ccc3d7]/30">
-                    {[65, 40, 85, 55, 75, 45, 90, 60, 95].map((val, idx) => (
-                      <div key={idx} className="flex-1 flex items-end justify-center gap-1 h-full">
-                        <div
-                          style={{ height: `${val}%` }}
-                          className="w-full max-w-[18px] bg-[#ebddff] hover:bg-[#5300b7] transition-all rounded-t-lg"
-                          title={`Sellers Activity: ${val}%`}
-                        />
-                        <div
-                          style={{ height: `${Math.max(20, val - 20)}%` }}
-                          className="w-full max-w-[12px] bg-[#f3ebf9] rounded-t-lg"
-                          title={`Users Activity: ${val - 20}%`}
-                        />
-                      </div>
-                    ))}
-                  </div>
+                  {orders.length === 0 ? (
+                    <p className="text-xs text-[#7b7486] py-16 text-center">No orders yet — this chart will fill in as orders come through.</p>
+                  ) : (
+                    <div className="h-48 flex items-end justify-between gap-2 pt-6 pb-2 px-2 border-b border-[#ccc3d7]/30">
+                      {(() => {
+                        const maxCount = Math.max(1, ...dailyOrderCounts.map((d) => d.count));
+                        return dailyOrderCounts.map((d, idx) => (
+                          <div key={idx} className="flex-1 flex flex-col items-center justify-end gap-1.5 h-full">
+                            <span className="text-[10px] font-bold text-[#5300b7]">{d.count > 0 ? d.count : ''}</span>
+                            <div
+                              style={{ height: `${Math.max(4, (d.count / maxCount) * 100)}%` }}
+                              className="w-full max-w-[28px] bg-[#ebddff] hover:bg-[#5300b7] transition-all rounded-t-lg"
+                              title={`${d.label}: ${d.count} order${d.count !== 1 ? 's' : ''}`}
+                            />
+                            <span className="text-[10px] text-[#7b7486] font-semibold">{d.label}</span>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  )}
                 </div>
 
-                {/* Recent Alerts Feed */}
+                {/* Recent Alerts Feed — real pending items only */}
                 <div className="bg-white p-6 rounded-3xl border border-[#ccc3d7]/40 shadow-xs flex flex-col justify-between space-y-4">
                   <div>
                     <h3 className="font-serif-source text-xl font-bold text-[#1d1a24] mb-4">
                       Recent Alerts
                     </h3>
-                    <div className="space-y-4 text-xs">
-                      <div className="flex items-start gap-3">
-                        <span className="w-2 h-2 rounded-full bg-[#ba1a1a] mt-1.5 shrink-0"></span>
-                        <div>
-                          <p className="font-bold text-[#1d1a24]">New Withdrawal Request</p>
-                          <p className="text-[#4a4455]">MWK 150,000 from Seller #402</p>
-                          <span className="text-[10px] text-purple-700 font-semibold">2 mins ago</span>
-                        </div>
+                    {recentAlerts.length === 0 ? (
+                      <p className="text-xs text-[#7b7486]">No urgent items — you're all caught up.</p>
+                    ) : (
+                      <div className="space-y-4 text-xs">
+                        {recentAlerts.map((alert, idx) => (
+                          <div key={idx} className="flex items-start gap-3">
+                            <span className="w-2 h-2 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: alert.color }}></span>
+                            <div>
+                              <p className="font-bold text-[#1d1a24]">{alert.title}</p>
+                              <p className="text-[#4a4455]">{alert.detail}</p>
+                              {alert.date && <span className="text-[10px] text-[#7b7486]">{alert.date}</span>}
+                            </div>
+                          </div>
+                        ))}
                       </div>
-
-                      <div className="flex items-start gap-3">
-                        <span className="w-2 h-2 rounded-full bg-[#5300b7] mt-1.5 shrink-0"></span>
-                        <div>
-                          <p className="font-bold text-[#1d1a24]">Seller Application</p>
-                          <p className="text-[#4a4455]">"TechHub Malawi" is requesting access</p>
-                          <span className="text-[10px] text-[#7b7486]">15 mins ago</span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-3">
-                        <span className="w-2 h-2 rounded-full bg-[#7b7486] mt-1.5 shrink-0"></span>
-                        <div>
-                          <p className="font-bold text-[#1d1a24]">Bulk Product Import</p>
-                          <p className="text-[#4a4455]">Completed 1,200 entries</p>
-                          <span className="text-[10px] text-[#7b7486]">1 hour ago</span>
-                        </div>
-                      </div>
-                    </div>
+                    )}
                   </div>
-
-                  <button
-                    onClick={() => onShowToast('Audit Logs exported!')}
-                    className="w-full py-2.5 rounded-xl border border-[#ccc3d7] text-[#5300b7] font-bold text-xs hover:bg-[#f3ebf9] transition-colors cursor-pointer"
-                  >
-                    VIEW ALL AUDIT LOGS
-                  </button>
                 </div>
               </div>
 
-              {/* Business Analysis & Growth Analytics Section */}
+              {/* Business Performance — real revenue for the selected period */}
               <div className="bg-white p-6 sm:p-8 rounded-3xl border border-[#ccc3d7]/40 shadow-xs space-y-6">
                 {/* Header & Timeframe Controls */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#ccc3d7]/30">
                   <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="p-1 bg-emerald-100 text-emerald-800 rounded-lg flex items-center justify-center">
-                        <span className="material-symbols-outlined text-[18px]">trending_up</span>
-                      </span>
-                      <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                        BUSINESS GROWING (+24.8% YoY)
-                      </span>
-                    </div>
                     <h3 className="font-serif-source text-2xl font-bold text-[#1d1a24]">
-                      Business Performance &amp; Consumer Analytics
+                      Business Performance
                     </h3>
                     <p className="text-xs text-[#4a4455] mt-0.5">
-                      Tracking overall revenue trajectory alongside user browsing intent vs. actual purchases
+                      Revenue and order volume for the selected period, computed from live orders.
                     </p>
                   </div>
 
@@ -1321,270 +1343,78 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   </div>
                 </div>
 
-                {/* Key Metric Highlights Bar */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-[#fef7ff] p-4 rounded-2xl border border-[#ebddff]">
+                {/* Key Metric Highlights Bar — all real for the selected period */}
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 bg-[#fef7ff] p-4 rounded-2xl border border-[#ebddff]">
                   <div>
                     <span className="text-[10px] font-bold text-[#7b7486] uppercase tracking-wider block">
-                      Revenue Trajectory
+                      Revenue This Period
                     </span>
                     <span className="font-serif-source text-lg font-bold text-[#5300b7]">
-                      {analyticsTimeframe === '30d' ? 'MWK 4,500,000' : analyticsTimeframe === '90d' ? 'MWK 12,800,000' : 'MWK 48,200,000'}
+                      MWK {periodStats.revenue.toLocaleString()}
                     </span>
-                    <span className="text-[10px] text-emerald-600 font-bold block">+18.2% vs prev period</span>
+                    {periodStats.revenueChangePct !== null ? (
+                      <span className={`text-[10px] font-bold block ${periodStats.revenueChangePct >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        {periodStats.revenueChangePct >= 0 ? '+' : ''}{periodStats.revenueChangePct.toFixed(1)}% vs prev period
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-[#7b7486] block">No prior period to compare yet</span>
+                    )}
                   </div>
                   <div>
                     <span className="text-[10px] font-bold text-[#7b7486] uppercase tracking-wider block">
-                      Total Product Views
+                      Completed Orders
                     </span>
                     <span className="font-serif-source text-lg font-bold text-[#1d1a24]">
-                      {analyticsTimeframe === '30d' ? '128,400' : analyticsTimeframe === '90d' ? '382,000' : '1,450,000'}
+                      {periodStats.ordersCount.toLocaleString()} Orders
                     </span>
-                    <span className="text-[10px] text-purple-600 font-bold block">+32.5% browsing interest</span>
                   </div>
                   <div>
                     <span className="text-[10px] font-bold text-[#7b7486] uppercase tracking-wider block">
-                      Completed Purchases
+                      Total Product Views (All Time)
                     </span>
                     <span className="font-serif-source text-lg font-bold text-[#1d1a24]">
-                      {analyticsTimeframe === '30d' ? '850 Orders' : analyticsTimeframe === '90d' ? '2,420 Orders' : '9,810 Orders'}
+                      {overviewStats.totalProductViews.toLocaleString()}
                     </span>
-                    <span className="text-[10px] text-emerald-600 font-bold block">+14.1% completed checkouts</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-bold text-[#7b7486] uppercase tracking-wider block">
-                      Avg Conversion Rate
-                    </span>
-                    <span className="font-serif-source text-lg font-bold text-[#1d1a24]">
-                      6.61%
-                    </span>
-                    <span className="text-[10px] text-amber-600 font-bold block">Strong commercial intent</span>
                   </div>
                 </div>
 
-                {/* Main Line Graph Component */}
-                <div className="space-y-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-bold text-[#4a4455]">
-                    <span className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-[18px] text-[#5300b7]">show_chart</span>
-                      Business Growth Line Graph
-                    </span>
-                    <div className="flex items-center gap-4">
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-3 h-1 bg-[#5300b7] rounded-full inline-block"></span>
-                        <span className="text-[#5300b7]">Revenue Growth (MWK)</span>
-                      </span>
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-3 h-1 bg-[#10b981] rounded-full inline-block"></span>
-                        <span className="text-[#10b981]">Product Views (Interest)</span>
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* SVG Line Graph */}
-                  <div className="relative w-full overflow-x-auto bg-[#faf8fc] p-4 sm:p-6 rounded-2xl border border-[#ccc3d7]/30">
-                    <svg viewBox="0 0 800 240" className="w-full h-60 min-w-[620px]" preserveAspectRatio="none">
-                      <defs>
-                        <linearGradient id="revenueGrowthGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#5300b7" stopOpacity="0.30" />
-                          <stop offset="100%" stopColor="#5300b7" stopOpacity="0.0" />
-                        </linearGradient>
-                      </defs>
-
-                      {/* Horizontal Gridlines */}
-                      <line x1="40" y1="30" x2="760" y2="30" stroke="#e5e7eb" strokeDasharray="4 4" />
-                      <line x1="40" y1="80" x2="760" y2="80" stroke="#e5e7eb" strokeDasharray="4 4" />
-                      <line x1="40" y1="130" x2="760" y2="130" stroke="#e5e7eb" strokeDasharray="4 4" />
-                      <line x1="40" y1="180" x2="760" y2="180" stroke="#e5e7eb" strokeDasharray="4 4" />
-
-                      {/* Area Fill under Revenue Line */}
-                      <path
-                        d="M 60,180 Q 170,160 280,120 T 500,80 T 740,35 L 740,195 L 60,195 Z"
-                        fill="url(#revenueGrowthGrad)"
-                      />
-
-                      {/* Revenue Growth Smooth Vector Line */}
-                      <path
-                        d="M 60,180 Q 170,160 280,120 T 500,80 T 740,35"
-                        fill="none"
-                        stroke="#5300b7"
-                        strokeWidth="4"
-                        strokeLinecap="round"
-                      />
-
-                      {/* Product Views Line */}
-                      <path
-                        d="M 60,190 Q 170,140 280,110 T 500,65 T 740,25"
-                        fill="none"
-                        stroke="#10b981"
-                        strokeWidth="3"
-                        strokeDasharray="6 4"
-                        strokeLinecap="round"
-                      />
-
-                      {/* Data Points & Tooltips */}
-                      {[
-                        { x: 60, y: 180, rev: 'MWK 1.2M', label: analyticsTimeframe === '30d' ? 'Wk 1' : analyticsTimeframe === '90d' ? 'Month 1' : 'Q1' },
-                        { x: 173, y: 160, rev: 'MWK 1.8M', label: analyticsTimeframe === '30d' ? 'Wk 2' : analyticsTimeframe === '90d' ? 'Month 2' : 'Q2' },
-                        { x: 286, y: 120, rev: 'MWK 2.4M', label: analyticsTimeframe === '30d' ? 'Wk 3' : analyticsTimeframe === '90d' ? 'Month 3' : 'Q3' },
-                        { x: 400, y: 95, rev: 'MWK 3.1M', label: analyticsTimeframe === '30d' ? 'Wk 4' : analyticsTimeframe === '90d' ? 'Month 4' : 'Q4' },
-                        { x: 513, y: 75, rev: 'MWK 3.7M', label: analyticsTimeframe === '30d' ? 'Wk 5' : analyticsTimeframe === '90d' ? 'Month 5' : 'Q5' },
-                        { x: 626, y: 55, rev: 'MWK 4.1M', label: analyticsTimeframe === '30d' ? 'Wk 6' : analyticsTimeframe === '90d' ? 'Month 6' : 'Q6' },
-                        { x: 740, y: 35, rev: 'MWK 4.5M', label: analyticsTimeframe === '30d' ? 'Wk 7' : analyticsTimeframe === '90d' ? 'Current' : 'Q7' },
-                      ].map((pt, i) => (
-                        <g key={i} className="group cursor-pointer">
-                          <circle cx={pt.x} cy={pt.y} r="6" fill="#5300b7" stroke="#ffffff" strokeWidth="2" />
-                          <circle cx={pt.x} cy={pt.y} r="10" fill="#5300b7" opacity="0.2" className="group-hover:scale-125 transition-transform" />
-                          <text x={pt.x} y="215" textAnchor="middle" fill="#6b7280" fontSize="11" fontWeight="bold">
-                            {pt.label}
-                          </text>
-                          <text x={pt.x} y={pt.y - 12} textAnchor="middle" fill="#5300b7" fontSize="10" fontWeight="bold">
-                            {pt.rev}
-                          </text>
-                        </g>
-                      ))}
-                    </svg>
-                  </div>
-                </div>
-
-                {/* What Users Are Viewing vs. Buying Breakdown */}
+                {/* Top Products by Views — real engagement, no fabricated conversion numbers */}
                 <div className="pt-2 border-t border-[#ccc3d7]/30">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
-                    <div>
-                      <h4 className="font-serif-source text-lg font-bold text-[#1d1a24] flex items-center gap-2">
-                        <span className="material-symbols-outlined text-[#5300b7]">insights</span>
-                        Consumer Behavior: High View Interest vs. Actual Purchases
-                      </h4>
-                      <p className="text-xs text-[#4a4455]">
-                        Comparing items that receive massive browsing volume with products converting into finalized sales
-                      </p>
-                    </div>
+                  <div className="mb-4">
+                    <h4 className="font-serif-source text-lg font-bold text-[#1d1a24] flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[#5300b7]">insights</span>
+                      Top Products by Views
+                    </h4>
+                    <p className="text-xs text-[#4a4455]">
+                      Real view counts from the marketplace catalog.
+                    </p>
                   </div>
 
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    {/* Item 1 */}
-                    <div className="bg-[#fef7ff] p-4 rounded-2xl border border-[#ccc3d7]/40 flex flex-col justify-between space-y-3">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <span className="text-[10px] font-extrabold text-[#5300b7] bg-[#f3ebf9] px-2 py-0.5 rounded-md uppercase">
-                            TEXTILES &amp; FASHION
-                          </span>
-                          <h5 className="font-bold text-sm text-[#1d1a24] mt-1">Chitenje African Wax Fabrics</h5>
-                        </div>
-                        <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full">
-                          13.1% Conv.
-                        </span>
-                      </div>
-
-                      <div className="space-y-2 text-xs">
-                        <div>
-                          <div className="flex justify-between text-[#4a4455] font-semibold mb-1">
-                            <span>Views: 24,500</span>
-                            <span className="text-[#5300b7] font-bold">Buys: 640 Orders (MWK 1.28M)</span>
+                  {topViewedProducts.length === 0 ? (
+                    <p className="text-xs text-[#7b7486] py-6 text-center">No product view data yet.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      {topViewedProducts.map((p) => (
+                        <div key={p.id} className="bg-[#fef7ff] p-4 rounded-2xl border border-[#ccc3d7]/40 flex flex-col justify-between space-y-3">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <span className="text-[10px] font-extrabold text-[#5300b7] bg-[#f3ebf9] px-2 py-0.5 rounded-md uppercase">
+                                {p.category}
+                              </span>
+                              <h5 className="font-bold text-sm text-[#1d1a24] mt-1">{p.name}</h5>
+                            </div>
+                            <span className="text-xs font-bold text-[#5300b7] bg-[#f3ebf9] px-2.5 py-1 rounded-full whitespace-nowrap">
+                              {(p.viewsCount || 0).toLocaleString()} views
+                            </span>
                           </div>
-                          <div className="w-full bg-[#e8def8] h-2.5 rounded-full overflow-hidden flex">
-                            <div className="bg-[#10b981] h-full" style={{ width: '80%' }} title="Views" />
-                            <div className="bg-[#5300b7] h-full" style={{ width: '20%' }} title="Purchases" />
+                          <div className="flex justify-between text-[#4a4455] font-semibold text-xs">
+                            <span>{p.sellerName || 'Verified Merchant'}</span>
+                            <span className="text-[#5300b7] font-bold">MWK {p.price.toLocaleString()} · Stock: {p.stock ?? '—'}</span>
                           </div>
                         </div>
-                      </div>
-                      <p className="text-[11px] text-[#4a4455] italic bg-white p-2 rounded-xl border border-[#ccc3d7]/30">
-                        🔥 High Demand &amp; High Purchase Rate: Top volume driver in soft goods and traditional apparel.
-                      </p>
+                      ))}
                     </div>
-
-                    {/* Item 2 */}
-                    <div className="bg-[#fef7ff] p-4 rounded-2xl border border-[#ccc3d7]/40 flex flex-col justify-between space-y-3">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <span className="text-[10px] font-extrabold text-[#5300b7] bg-[#f3ebf9] px-2 py-0.5 rounded-md uppercase">
-                            ELECTRONICS
-                          </span>
-                          <h5 className="font-bold text-sm text-[#1d1a24] mt-1">Samsung Galaxy S22 Ultra</h5>
-                        </div>
-                        <span className="text-xs font-bold text-amber-700 bg-amber-100 px-2.5 py-1 rounded-full">
-                          1.5% Conv.
-                        </span>
-                      </div>
-
-                      <div className="space-y-2 text-xs">
-                        <div>
-                          <div className="flex justify-between text-[#4a4455] font-semibold mb-1">
-                            <span>Views: 31,200 (Highest Views)</span>
-                            <span className="text-[#5300b7] font-bold">Buys: 48 Orders (MWK 1.44M)</span>
-                          </div>
-                          <div className="w-full bg-[#e8def8] h-2.5 rounded-full overflow-hidden flex">
-                            <div className="bg-[#3b82f6] h-full" style={{ width: '92%' }} title="Views" />
-                            <div className="bg-[#5300b7] h-full" style={{ width: '8%' }} title="Purchases" />
-                          </div>
-                        </div>
-                      </div>
-                      <p className="text-[11px] text-[#4a4455] italic bg-white p-2 rounded-xl border border-[#ccc3d7]/30">
-                        👀 High Browsing Curiosity: Users view heavily for price comparisons before buying.
-                      </p>
-                    </div>
-
-                    {/* Item 3 */}
-                    <div className="bg-[#fef7ff] p-4 rounded-2xl border border-[#ccc3d7]/40 flex flex-col justify-between space-y-3">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <span className="text-[10px] font-extrabold text-[#5300b7] bg-[#f3ebf9] px-2 py-0.5 rounded-md uppercase">
-                            GROCERIES &amp; FOOD
-                          </span>
-                          <h5 className="font-bold text-sm text-[#1d1a24] mt-1">Fresh Lake Chambo Fish (5kg Pack)</h5>
-                        </div>
-                        <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full">
-                          27.5% Conv.
-                        </span>
-                      </div>
-
-                      <div className="space-y-2 text-xs">
-                        <div>
-                          <div className="flex justify-between text-[#4a4455] font-semibold mb-1">
-                            <span>Views: 18,900</span>
-                            <span className="text-[#5300b7] font-bold">Buys: 520 Orders (MWK 780k)</span>
-                          </div>
-                          <div className="w-full bg-[#e8def8] h-2.5 rounded-full overflow-hidden flex">
-                            <div className="bg-[#10b981] h-full" style={{ width: '70%' }} title="Views" />
-                            <div className="bg-[#5300b7] h-full" style={{ width: '30%' }} title="Purchases" />
-                          </div>
-                        </div>
-                      </div>
-                      <p className="text-[11px] text-[#4a4455] italic bg-white p-2 rounded-xl border border-[#ccc3d7]/30">
-                        ⚡ Fastest Conversion: Essential fresh local product with immediate order completion.
-                      </p>
-                    </div>
-
-                    {/* Item 4 */}
-                    <div className="bg-[#fef7ff] p-4 rounded-2xl border border-[#ccc3d7]/40 flex flex-col justify-between space-y-3">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <span className="text-[10px] font-extrabold text-[#5300b7] bg-[#f3ebf9] px-2 py-0.5 rounded-md uppercase">
-                            SOLAR &amp; ENERGY
-                          </span>
-                          <h5 className="font-bold text-sm text-[#1d1a24] mt-1">5kVA Solar Power Inverter Set</h5>
-                        </div>
-                        <span className="text-xs font-bold text-purple-700 bg-purple-100 px-2.5 py-1 rounded-full">
-                          4.2% Conv.
-                        </span>
-                      </div>
-
-                      <div className="space-y-2 text-xs">
-                        <div>
-                          <div className="flex justify-between text-[#4a4455] font-semibold mb-1">
-                            <span>Views: 14,800</span>
-                            <span className="text-[#5300b7] font-bold">Buys: 62 Orders (MWK 930k)</span>
-                          </div>
-                          <div className="w-full bg-[#e8def8] h-2.5 rounded-full overflow-hidden flex">
-                            <div className="bg-[#8b5cf6] h-full" style={{ width: '85%' }} title="Views" />
-                            <div className="bg-[#5300b7] h-full" style={{ width: '15%' }} title="Purchases" />
-                          </div>
-                        </div>
-                      </div>
-                      <p className="text-[11px] text-[#4a4455] italic bg-white p-2 rounded-xl border border-[#ccc3d7]/30">
-                        🔋 High Ticket Solution: High order values drive strong overall merchant volume.
-                      </p>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>

@@ -32,6 +32,14 @@ export const Header: React.FC<HeaderProps> = ({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const cities = ['Lilongwe', 'Blantyre', 'Mzuzu', 'Zomba'];
 
+  const getInitials = (name?: string) =>
+    (name || 'Guest')
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((n) => n[0]?.toUpperCase())
+      .join('') || 'G';
+
   const handleNavClick = (view: string) => {
     onNavigate(view);
     setIsMenuOpen(false);
@@ -139,7 +147,7 @@ export const Header: React.FC<HeaderProps> = ({
               className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-900 text-white dark:bg-white dark:text-black flex items-center justify-center font-semibold text-[10px] sm:text-xs shadow-sm hover:scale-105 transition-transform cursor-pointer"
               title="Account Settings"
             >
-              JD
+              {getInitials(userName)}
             </button>
           </div>
         </div>
@@ -320,12 +328,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Drawer Footer User Profile */}
             <div className="pt-4 border-t border-slate-200 dark:border-zinc-800 flex items-center gap-3">
               <div className="w-9 h-9 rounded-full bg-slate-900 text-white dark:bg-white dark:text-black flex items-center justify-center font-bold text-xs shadow-sm">
-                {(userName || 'Guest')
-                  .split(' ')
-                  .filter(Boolean)
-                  .slice(0, 2)
-                  .map((n) => n[0]?.toUpperCase())
-                  .join('') || 'G'}
+                {getInitials(userName)}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{userName || 'Guest'}</p>
