@@ -10,7 +10,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.db.session import get_db
-from app.models.community import CommunityPost, CommunityComment, PostLike
+from app.models.community import CommunityPost, CommunityComment, PostLike, CommentLike
+from app.models.product import Product
 from app.models.user import User
 from app.api.deps import get_current_user, get_current_admin
 
@@ -20,10 +21,21 @@ router = APIRouter(prefix="/community", tags=["community"])
 class PostCreate(BaseModel):
     content: str
     images: list[str] = []
+    category_tag: str | None = None
+    tagged_product_id: str | None = None
 
 
 def _serialize_post(p: CommunityPost) -> dict:
     comments = [c for c in (p.comments or []) if c.deleted_at is None]
+    tagged_product = None
+    if getattr(p, "tagged_product", None):
+        tp = p.tagged_product
+        tagged_product = {
+            "id": str(tp.id),
+            "name": tp.name,
+            "price": tp.price,
+            "images": tp.images or [],
+        }
     return {
         "id": str(p.id),
         "user_id": str(p.user_id) if p.user_id else None,
@@ -31,6 +43,8 @@ def _serialize_post(p: CommunityPost) -> dict:
         "content": p.content,
         "images": p.images or [],
         "likes": p.likes,
+        "category_tag": p.category_tag,
+        "tagged_product": tagged_product,
         "created_at": p.created_at.isoformat(),
         "comments": [
             {
@@ -39,6 +53,8 @@ def _serialize_post(p: CommunityPost) -> dict:
                 "author": c.user.full_name if c.user else "User",
                 "user_id": str(c.user_id),
                 "created_at": c.created_at.isoformat(),
+                "likes": len(c.liked_by or []),
+                "liked_by_ids": [str(l.user_id) for l in (c.liked_by or [])],
             }
             for c in comments
         ],
@@ -53,7 +69,9 @@ async def list_posts(db: AsyncSession = Depends(get_db)):
         .where(CommunityPost.deleted_at.is_(None))
         .options(
             selectinload(CommunityPost.author),
+            selectinload(CommunityPost.tagged_product),
             selectinload(CommunityPost.comments).selectinload(CommunityComment.user),
+            selectinload(CommunityPost.comments).selectinload(CommunityComment.liked_by),
             selectinload(CommunityPost.liked_by),
         )
         .order_by(CommunityPost.created_at.desc())
@@ -68,10 +86,17 @@ async def create_post(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    tagged_product = None
+    if payload.tagged_product_id:
+        prod_result = await db.execute(select(Product).where(Product.id == payload.tagged_product_id))
+        tagged_product = prod_result.scalar_one_or_none()
+
     post = CommunityPost(
         user_id=current_user.id,
         content=payload.content,
         images=payload.images,
+        category_tag=payload.category_tag,
+        tagged_product_id=tagged_product.id if tagged_product else None,
     )
     db.add(post)
     await db.flush()
@@ -84,6 +109,13 @@ async def create_post(
         "content": post.content,
         "images": post.images or [],
         "likes": post.likes or 0,
+        "category_tag": post.category_tag,
+        "tagged_product": {
+            "id": str(tagged_product.id),
+            "name": tagged_product.name,
+            "price": tagged_product.price,
+            "images": tagged_product.images or [],
+        } if tagged_product else None,
         "created_at": post.created_at.isoformat(),
         "comments": [],
         "liked_by_ids": [],
@@ -204,3 +236,47 @@ async def delete_comment(
     comment.deleted_at = datetime.now(timezone.utc)
     await db.flush()
     return {"detail": "Comment deleted"}
+
+
+@router.post("/posts/{post_id}/comments/{comment_id}/like")
+async def like_comment(
+    post_id: str,
+    comment_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(select(CommunityComment).where(CommunityComment.id == comment_id))
+    comment = result.scalar_one_or_none()
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found")
+
+    existing = await db.execute(
+        select(CommentLike).where(CommentLike.comment_id == comment_id, CommentLike.user_id == current_user.id)
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Already liked")
+
+    db.add(CommentLike(comment_id=comment.id, user_id=current_user.id))
+    await db.flush()
+    count = await db.execute(select(CommentLike).where(CommentLike.comment_id == comment_id))
+    return {"detail": "Liked", "likes": len(count.scalars().all())}
+
+
+@router.delete("/posts/{post_id}/comments/{comment_id}/like")
+async def unlike_comment(
+    post_id: str,
+    comment_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    existing = await db.execute(
+        select(CommentLike).where(CommentLike.comment_id == comment_id, CommentLike.user_id == current_user.id)
+    )
+    like = existing.scalar_one_or_none()
+    if not like:
+        raise HTTPException(status_code=400, detail="Not liked yet")
+
+    await db.delete(like)
+    await db.flush()
+    count = await db.execute(select(CommentLike).where(CommentLike.comment_id == comment_id))
+    return {"detail": "Unliked", "likes": len(count.scalars().all())}

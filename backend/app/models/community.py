@@ -18,10 +18,15 @@ class CommunityPost(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False)
     images: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
     likes: Mapped[int] = mapped_column(Integer, default=0)
+    category_tag: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    tagged_product_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("products.id", ondelete="SET NULL"), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     author: Mapped["User"] = relationship("User")
+    tagged_product: Mapped["Product"] = relationship("Product")
     comments: Mapped[list["CommunityComment"]] = relationship(
         "CommunityComment", back_populates="post", cascade="all, delete-orphan"
     )
@@ -44,6 +49,9 @@ class CommunityComment(Base):
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     post: Mapped["CommunityPost"] = relationship("CommunityPost", back_populates="comments")
     user: Mapped["User"] = relationship("User")
+    liked_by: Mapped[list["CommentLike"]] = relationship(
+        "CommentLike", back_populates="comment", cascade="all, delete-orphan"
+    )
 
 
 class PostLike(Base):
@@ -56,3 +64,15 @@ class PostLike(Base):
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     post: Mapped["CommunityPost"] = relationship("CommunityPost", back_populates="liked_by")
+
+
+class CommentLike(Base):
+    __tablename__ = "comment_likes"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    comment_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("community_comments.id", ondelete="CASCADE"), nullable=False
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    comment: Mapped["CommunityComment"] = relationship("CommunityComment", back_populates="liked_by")

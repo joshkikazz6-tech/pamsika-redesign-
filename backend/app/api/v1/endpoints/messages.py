@@ -197,6 +197,32 @@ async def admin_start_conversation(payload: dict, db: AsyncSession = Depends(get
     return {"conversation_id": str(conv.id), "detail": "Message sent"}
 
 
+@router.patch("/admin/{conversation_id}")
+async def admin_update_conversation(
+    conversation_id: str,
+    payload: dict,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(get_current_admin),
+):
+    """Toggle resolved status and/or mark the customer's messages read/unread."""
+    result = await db.execute(
+        select(Conversation).where(Conversation.id == conversation_id)
+        .options(selectinload(Conversation.messages), selectinload(Conversation.user))
+    )
+    conv = result.scalar_one_or_none()
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    if "resolved" in payload:
+        conv.resolved = bool(payload["resolved"])
+    if "read" in payload:
+        for m in conv.messages:
+            if not m.is_admin:
+                m.read = bool(payload["read"])
+    await db.flush()
+    return _serialize_conv(conv, admin.id, is_admin=True)
+
+
 @router.get("/{conversation_id}")
 async def get_conversation(conversation_id: str, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     result = await db.execute(
@@ -276,8 +302,10 @@ def _serialize_conv(conv: Conversation, viewer_id, is_admin: bool = False) -> di
         "order_ref": str(conv.order_id)[:8].upper() if conv.order_id else None,
         "user_name": conv.user.full_name if conv.user else "User",
         "user_email": conv.user.email if conv.user else "",
+        "user_phone": (conv.user.seller_phone if conv.user else "") or "",
         "user_id": str(conv.user_id),
         "participant_type": conv.participant_type,
+        "resolved": conv.resolved,
         "unread": unread,
         "updated_at": conv.updated_at.isoformat(),
         "messages": [

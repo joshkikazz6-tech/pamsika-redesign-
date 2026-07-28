@@ -13,7 +13,7 @@ from app.db.session import get_db
 from app.models.product import Product
 from app.models.order import Order
 from app.models.user import User
-from app.models.affiliate import AffiliateWithdrawal, WithdrawalStatus
+from app.models.affiliate import AffiliateWithdrawal, WithdrawalStatus, AffiliateClick
 from app.models.audit import AuditLog
 from app.schemas.product import ProductCreate, ProductUpdate, ProductOut, PaginatedProducts
 from app.schemas.common import (
@@ -125,9 +125,48 @@ async def list_affiliates(
             "referrals": referral_counts.get(u.affiliate_id, 0),
             "commission_balance": u.affiliate_commission_balance,
             "commission_override": u.affiliate_commission_override,
+            "created_at": u.created_at.isoformat() if u.created_at else None,
             "status": "active",
         }
         for u in users
+    ]
+
+
+@router.get("/affiliate-clicks")
+async def list_affiliate_clicks(
+    limit: int = Query(200, ge=1, le=1000),
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(get_current_admin),
+):
+    """Real click-traffic log for the affiliate program (Dolo referral clicks)."""
+    result = await db.execute(
+        select(AffiliateClick)
+        .options(selectinload(AffiliateClick.product))
+        .order_by(AffiliateClick.clicked_at.desc())
+        .limit(limit)
+    )
+    clicks = result.scalars().all()
+
+    aff_ids = list({c.affiliate_id for c in clicks if c.affiliate_id})
+    names: dict = {}
+    if aff_ids:
+        users_result = await db.execute(
+            select(User.affiliate_id, User.full_name).where(User.affiliate_id.in_(aff_ids))
+        )
+        names = {row[0]: row[1] for row in users_result.all()}
+
+    return [
+        {
+            "id": str(c.id),
+            "affiliate_id": c.affiliate_id,
+            "affiliate_name": names.get(c.affiliate_id, c.affiliate_id),
+            "product_id": str(c.product_id),
+            "product_name": c.product.name if c.product else "Unknown product",
+            "ip_address": c.ip_address,
+            "user_agent": c.user_agent,
+            "clicked_at": c.clicked_at.isoformat(),
+        }
+        for c in clicks
     ]
 
 
@@ -580,16 +619,20 @@ async def list_withdrawals(
         except Exception:
             payout = {}
 
-        # Fetch affiliate email
+        # Fetch affiliate name + email
         user_result = await db.execute(
-            select(User.email).where(User.id == w.user_id)
+            select(User.email, User.full_name).where(User.id == w.user_id)
         )
-        email = user_result.scalar_one_or_none() or ""
+        user_row = user_result.first()
+        email = user_row[0] if user_row else ""
+        full_name = user_row[1] if user_row else ""
 
         out.append({
             "id": str(w.id),
             "user_id": str(w.user_id),
+            "withdrawal_type": w.withdrawal_type,
             "affiliate_email": email,
+            "affiliate_name": full_name,
             "amount": w.amount,
             "method": w.method,
             "payout_details": payout,

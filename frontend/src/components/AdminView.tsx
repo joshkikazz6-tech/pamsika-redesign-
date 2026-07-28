@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Product, OrderItem, SellerProfile, PendingProductApproval } from '../types';
 
 interface AdminViewProps {
@@ -16,6 +16,24 @@ interface AdminViewProps {
   onDeleteProduct?: (productId: string) => void;
   onShowToast: (msg: string) => void;
   onNavigate?: (view: any) => void;
+  // Real backend-fed admin data (replaces the previous hardcoded mock arrays).
+  affiliates?: any[];
+  withdrawals?: any[]; // combined affiliate + seller payout rows from GET /admin/withdrawals
+  clickLogs?: any[];
+  promos?: any[];
+  inbox?: any[];
+  totalUsers?: number;
+  onApproveWithdrawal?: (id: string) => void;
+  onRejectWithdrawal?: (id: string, note?: string) => void;
+  onCreatePromo?: (data: Record<string, any>) => void;
+  onUpdatePromo?: (id: string, data: Record<string, any>) => void;
+  onTogglePromo?: (id: string, isActive: boolean) => void;
+  onDeletePromo?: (id: string) => void;
+  onSendBroadcast?: (title: string, body: string) => void;
+  onReplyInbox?: (conversationId: string, text: string) => void;
+  onResolveInbox?: (conversationId: string, resolved: boolean) => void;
+  onSetInboxRead?: (conversationId: string, read: boolean) => void;
+  onDeleteInbox?: (conversationId: string) => void;
 }
 
 export const AdminView: React.FC<AdminViewProps> = ({
@@ -32,7 +50,24 @@ export const AdminView: React.FC<AdminViewProps> = ({
   onEditProduct,
   onDeleteProduct,
   onShowToast,
-  onNavigate
+  onNavigate,
+  affiliates: realAffiliates = [],
+  withdrawals: realWithdrawals = [],
+  clickLogs: realClickLogs = [],
+  promos: realPromos = [],
+  inbox: realInbox = [],
+  totalUsers = 0,
+  onApproveWithdrawal,
+  onRejectWithdrawal,
+  onCreatePromo,
+  onUpdatePromo,
+  onTogglePromo,
+  onDeletePromo,
+  onSendBroadcast,
+  onReplyInbox,
+  onResolveInbox,
+  onSetInboxRead,
+  onDeleteInbox,
 }) => {
   const [activeNav, setActiveNav] = useState<
     'home' | 'overview' | 'orders' | 'sellers' | 'approvals' | 'products' | 'affiliates' | 'withdrawals' | 'users' | 'promos' | 'notify' | 'inbox'
@@ -208,428 +243,102 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [affiliateTierFilter, setAffiliateTierFilter] = useState('ALL');
 
   // Affiliates Full Dataset State
-  const [affiliatesList, setAffiliatesList] = useState([
-    {
-      id: 'AFF-1001',
-      name: 'Limbani Phiri',
-      phone: '+265 991 234 567',
-      email: 'limbani.phiri@gmail.com',
-      location: 'Blantyre',
-      doloCode: 'DOLO-LMB-88',
-      joinedDate: '2025-01-12',
-      tier: 'Tier 1 Ambassador',
-      subInvites: 14,
-      totalSalesGenerated: 12450000,
-      totalCommissionEarned: 622500,
-      totalWithdrawn: 500000,
-      currentBalance: 122500,
-      payoutAccount: 'Airtel Money (0991234567)',
-      status: 'Active'
-    },
-    {
-      id: 'AFF-1002',
-      name: 'Chisomo Banda',
-      phone: '+265 882 345 678',
-      email: 'chisomo.b@yahoo.com',
-      location: 'Lilongwe',
-      doloCode: 'DOLO-CSM-42',
-      joinedDate: '2025-02-03',
-      tier: 'Tier 2 Promoter',
-      subInvites: 8,
-      totalSalesGenerated: 8200000,
-      totalCommissionEarned: 410000,
-      totalWithdrawn: 350000,
-      currentBalance: 60000,
-      payoutAccount: 'TNM Mpamba (0882345678)',
-      status: 'Active'
-    },
-    {
-      id: 'AFF-1003',
-      name: 'Kondwani Mwale',
-      phone: '+265 995 876 543',
-      email: 'kondwani.mwale@outlook.com',
-      location: 'Mzuzu',
-      doloCode: 'DOLO-KND-91',
-      joinedDate: '2025-03-18',
-      tier: 'VIP Influencer',
-      subInvites: 22,
-      totalSalesGenerated: 18900000,
-      totalCommissionEarned: 945000,
-      totalWithdrawn: 800000,
-      currentBalance: 145000,
-      payoutAccount: 'National Bank (Acc: 100392812)',
-      status: 'VIP'
-    },
-    {
-      id: 'AFF-1004',
-      name: 'Tiwonge Nyirenda',
-      phone: '+265 888 112 233',
-      email: 'tiwonge.n@gmail.com',
-      location: 'Zomba',
-      doloCode: 'DOLO-TWG-15',
-      joinedDate: '2025-04-29',
-      tier: 'Tier 1 Ambassador',
-      subInvites: 5,
-      totalSalesGenerated: 4100000,
-      totalCommissionEarned: 205000,
-      totalWithdrawn: 150000,
-      currentBalance: 55000,
-      payoutAccount: 'Airtel Money (0888112233)',
-      status: 'Active'
-    },
-    {
-      id: 'AFF-1005',
-      name: 'Blessings Kaima',
-      phone: '+265 999 445 566',
-      email: 'kaima.blessings@gmail.com',
-      location: 'Lilongwe',
-      doloCode: 'DOLO-BLS-19',
-      joinedDate: '2025-05-14',
-      tier: 'VIP Influencer',
-      subInvites: 19,
-      totalSalesGenerated: 15300000,
-      totalCommissionEarned: 765000,
-      totalWithdrawn: 700000,
-      currentBalance: 65000,
-      payoutAccount: 'Airtel Money (0999445566)',
-      status: 'VIP'
-    },
-    {
-      id: 'AFF-1006',
-      name: 'Memory Tembo',
-      phone: '+265 881 778 899',
-      email: 'memory.tembo@hotmail.com',
-      location: 'Kasungu',
-      doloCode: 'DOLO-MEM-07',
-      joinedDate: '2025-06-01',
-      tier: 'Tier 2 Promoter',
-      subInvites: 3,
-      totalSalesGenerated: 2800000,
-      totalCommissionEarned: 140000,
-      totalWithdrawn: 100000,
-      currentBalance: 40000,
-      payoutAccount: 'TNM Mpamba (0881778899)',
-      status: 'Active'
-    },
-    {
-      id: 'AFF-1007',
-      name: 'Yamikani Mhango',
-      phone: '+265 993 332 211',
-      email: 'yamikani.mhango@gmail.com',
-      location: 'Blantyre',
-      doloCode: 'DOLO-YMK-33',
-      joinedDate: '2025-06-19',
-      tier: 'Tier 1 Ambassador',
-      subInvites: 11,
-      totalSalesGenerated: 9600000,
-      totalCommissionEarned: 480000,
-      totalWithdrawn: 400000,
-      currentBalance: 80000,
-      payoutAccount: 'Standard Bank (Acc: 910023812)',
-      status: 'Active'
-    },
-    {
-      id: 'AFF-1008',
-      name: 'Zikomo Gondwe',
-      phone: '+265 884 556 677',
-      email: 'zikomo.gondwe@gmail.com',
-      location: 'Mangochi',
-      doloCode: 'DOLO-ZKM-55',
-      joinedDate: '2025-07-02',
-      tier: 'Tier 2 Promoter',
-      subInvites: 7,
-      totalSalesGenerated: 6100000,
-      totalCommissionEarned: 305000,
-      totalWithdrawn: 250000,
-      currentBalance: 55000,
-      payoutAccount: 'TNM Mpamba (0884556677)',
-      status: 'Active'
-    }
-  ]);
+  // Affiliates data — derived from real /admin/affiliates + /admin/withdrawals props
+  // (previously eight hardcoded arrays; see CHANGES.md history for context).
+  const affiliatesList = useMemo(() => realAffiliates.map((aff: any) => {
+    const sales = aff.sales || 0;
+    const tier = sales >= 50 ? 'VIP Influencer' : sales >= 20 ? 'Tier 2 Promoter' : 'Tier 1 Ambassador';
+    const affWds = realWithdrawals.filter((w: any) => w.user_id === aff.user_id && w.withdrawal_type === 'affiliate');
+    const totalWithdrawn = affWds.filter((w: any) => w.status === 'approved').reduce((s: number, w: any) => s + (w.amount || 0), 0);
+    const lastWd = affWds[0];
+    const payoutAccount = lastWd?.payout_details
+      ? `${lastWd.method} (${lastWd.payout_details.account || lastWd.payout_details.phone || lastWd.payout_details.number || 'on file'})`
+      : 'Not set';
+    return {
+      id: aff.id,
+      name: aff.name,
+      phone: lastWd?.payout_details?.phone || '',
+      email: aff.email,
+      location: '',
+      doloCode: aff.affiliate_id,
+      joinedDate: aff.created_at ? aff.created_at.slice(0, 10) : '',
+      tier,
+      subInvites: aff.referrals || 0,
+      totalSalesGenerated: sales,
+      totalCommissionEarned: (aff.commission_balance || 0) + totalWithdrawn,
+      totalWithdrawn,
+      currentBalance: aff.commission_balance || 0,
+      payoutAccount,
+      status: aff.status === 'active' ? 'Active' : aff.status,
+    };
+  }), [realAffiliates, realWithdrawals]);
 
-  // Commission Paid Log State
-  const [commissionPaidList, setCommissionPaidList] = useState([
-    {
-      id: 'PAY-9001',
-      date: '2026-07-25 16:45',
-      affiliateId: 'AFF-1003',
-      affiliateName: 'Kondwani Mwale',
-      phone: '+265 995 876 543',
-      payoutChannel: 'National Bank',
-      accountDetails: 'Acc: 100392812',
-      amountPaid: 250000,
-      transactionRef: 'NBM-EFT-991023',
-      salesPeriod: 'July 2026 Mid-Month Payout',
-      disbursedBy: 'Admin (SuperAdmin)',
-      status: 'Completed'
-    },
-    {
-      id: 'PAY-9002',
-      date: '2026-07-22 11:20',
-      affiliateId: 'AFF-1001',
-      affiliateName: 'Limbani Phiri',
-      phone: '+265 991 234 567',
-      payoutChannel: 'Airtel Money',
-      accountDetails: '0991234567',
-      amountPaid: 200000,
-      transactionRef: 'TXN-AIR-882190',
-      salesPeriod: 'July Week 2 Settlement',
-      disbursedBy: 'Admin (SuperAdmin)',
-      status: 'Completed'
-    },
-    {
-      id: 'PAY-9003',
-      date: '2026-07-19 09:15',
-      affiliateId: 'AFF-1005',
-      affiliateName: 'Blessings Kaima',
-      phone: '+265 999 445 566',
-      payoutChannel: 'Airtel Money',
-      accountDetails: '0999445566',
-      amountPaid: 350000,
-      transactionRef: 'TXN-AIR-771029',
-      salesPeriod: 'July Week 1 Commission',
-      disbursedBy: 'Admin (SuperAdmin)',
-      status: 'Completed'
-    },
-    {
-      id: 'PAY-9004',
-      date: '2026-07-15 14:00',
-      affiliateId: 'AFF-1002',
-      affiliateName: 'Chisomo Banda',
-      phone: '+265 882 345 678',
-      payoutChannel: 'TNM Mpamba',
-      accountDetails: '0882345678',
-      amountPaid: 150000,
-      transactionRef: 'TXN-MPM-391204',
-      salesPeriod: 'June 2026 End-Month Settlement',
-      disbursedBy: 'Admin (Finance)',
-      status: 'Completed'
-    },
-    {
-      id: 'PAY-9005',
-      date: '2026-07-10 10:30',
-      affiliateId: 'AFF-1007',
-      affiliateName: 'Yamikani Mhango',
-      phone: '+265 993 332 211',
-      payoutChannel: 'Standard Bank',
-      accountDetails: 'Acc: 910023812',
-      amountPaid: 200000,
-      transactionRef: 'STB-EFT-401928',
-      salesPeriod: 'June 2026 Mid-Month Payout',
-      disbursedBy: 'Admin (Finance)',
-      status: 'Completed'
-    },
-    {
-      id: 'PAY-9006',
-      date: '2026-07-05 15:10',
-      affiliateId: 'AFF-1008',
-      affiliateName: 'Zikomo Gondwe',
-      phone: '+265 884 556 677',
-      payoutChannel: 'TNM Mpamba',
-      accountDetails: '0884556677',
-      amountPaid: 120000,
-      transactionRef: 'TXN-MPM-102938',
-      salesPeriod: 'June Week 1 Payout',
-      disbursedBy: 'Admin (SuperAdmin)',
-      status: 'Completed'
-    }
-  ]);
+  const commissionPaidList = useMemo(() => realWithdrawals
+    .filter((w: any) => w.withdrawal_type === 'affiliate' && w.status === 'approved')
+    .map((w: any) => ({
+      id: w.id,
+      date: w.reviewed_at || w.created_at,
+      affiliateId: w.user_id,
+      affiliateName: w.affiliate_name || w.affiliate_email || 'Affiliate',
+      phone: w.payout_details?.phone || '',
+      payoutChannel: w.method,
+      accountDetails: w.payout_details?.account || w.payout_details?.phone || w.payout_details?.number || '',
+      amountPaid: w.amount,
+      transactionRef: w.admin_note || '',
+      salesPeriod: '',
+      disbursedBy: 'Admin',
+      status: 'Completed',
+    })), [realWithdrawals]);
 
-  // Affiliate Withdrawals Requests State
-  const [affiliateWithdrawalsList, setAffiliateWithdrawalsList] = useState([
-    {
-      id: 'WTH-801',
-      requestDate: '2026-07-26 18:10',
-      affiliateId: 'AFF-1001',
-      affiliateName: 'Limbani Phiri',
-      phone: '+265 991 234 567',
-      payoutMethod: 'Airtel Money',
-      accountNumber: '0991234567',
-      availableBalance: 122500,
-      requestedAmount: 100000,
-      status: 'Pending Approval'
-    },
-    {
-      id: 'WTH-802',
-      requestDate: '2026-07-26 14:25',
-      affiliateId: 'AFF-1002',
-      affiliateName: 'Chisomo Banda',
-      phone: '+265 882 345 678',
-      payoutMethod: 'TNM Mpamba',
-      accountNumber: '0882345678',
-      availableBalance: 60000,
-      requestedAmount: 50000,
-      status: 'Pending Approval'
-    },
-    {
-      id: 'WTH-803',
-      requestDate: '2026-07-25 20:00',
-      affiliateId: 'AFF-1006',
-      affiliateName: 'Memory Tembo',
-      phone: '+265 881 778 899',
-      payoutMethod: 'TNM Mpamba',
-      accountNumber: '0881778899',
-      availableBalance: 40000,
-      requestedAmount: 35000,
-      status: 'Pending Approval'
-    },
-    {
-      id: 'WTH-804',
-      requestDate: '2026-07-25 09:30',
-      affiliateId: 'AFF-1007',
-      affiliateName: 'Yamikani Mhango',
-      phone: '+265 993 332 211',
-      payoutMethod: 'Standard Bank',
-      accountNumber: 'Acc: 910023812',
-      availableBalance: 80000,
-      requestedAmount: 75000,
-      status: 'Approved'
-    }
-  ]);
+  const affiliateWithdrawalsList = useMemo(() => realWithdrawals
+    .filter((w: any) => w.withdrawal_type === 'affiliate')
+    .map((w: any) => ({
+      id: w.id,
+      requestDate: w.created_at,
+      affiliateId: w.user_id,
+      affiliateName: w.affiliate_name || w.affiliate_email || 'Affiliate',
+      phone: w.payout_details?.phone || '',
+      payoutMethod: w.method,
+      accountNumber: w.payout_details?.account || w.payout_details?.phone || w.payout_details?.number || '',
+      availableBalance: w.amount,
+      requestedAmount: w.amount,
+      status: w.status === 'pending' ? 'Pending Approval' : w.status === 'approved' ? 'Approved' : 'Rejected',
+    })), [realWithdrawals]);
 
-  // Clicks & Traffic Log State
-  const [clickLogsList, setClickLogsList] = useState([
-    {
-      id: 'CLK-301',
-      date: '2026-07-27 01:15',
-      affiliateName: 'Blessings Kaima',
-      doloCode: 'DOLO-BLS-19',
-      productName: 'Toyota Ractis 2016',
-      trafficSource: 'WhatsApp Group Share',
-      converted: true,
-      commissionEarned: 15000
-    },
-    {
-      id: 'CLK-302',
-      date: '2026-07-27 00:42',
-      affiliateName: 'Kondwani Mwale',
-      doloCode: 'DOLO-KND-91',
-      productName: 'Leather Bifold Wallet - Cognac',
-      trafficSource: 'Facebook Ad Link',
-      converted: true,
-      commissionEarned: 4500
-    },
-    {
-      id: 'CLK-303',
-      date: '2026-07-26 23:10',
-      affiliateName: 'Limbani Phiri',
-      doloCode: 'DOLO-LMB-88',
-      productName: 'Nike Air Max Sneakers',
-      trafficSource: 'Instagram Bio Link',
-      converted: false,
-      commissionEarned: 0
-    },
-    {
-      id: 'CLK-304',
-      date: '2026-07-26 21:55',
-      affiliateName: 'Chisomo Banda',
-      doloCode: 'DOLO-CSM-42',
-      productName: 'Smart Watch Series 8',
-      trafficSource: 'WhatsApp Direct Msg',
-      converted: true,
-      commissionEarned: 7500
-    },
-    {
-      id: 'CLK-305',
-      date: '2026-07-26 19:30',
-      affiliateName: 'Tiwonge Nyirenda',
-      doloCode: 'DOLO-TWG-15',
-      productName: 'Mechanical Gaming Keyboard',
-      trafficSource: 'Twitter Post Link',
-      converted: false,
-      commissionEarned: 0
-    }
-  ]);
+  const clickLogsList = useMemo(() => realClickLogs.map((c: any) => ({
+    id: c.id,
+    date: c.clicked_at,
+    affiliateName: c.affiliate_name || c.affiliate_id,
+    doloCode: c.affiliate_id,
+    productName: c.product_name,
+    trafficSource: c.user_agent ? c.user_agent.slice(0, 40) : 'Direct link',
+    // The schema doesn't attribute an order back to a specific click, so
+    // conversion/commission-per-click isn't computable — real click log,
+    // honest zeroes rather than invented outcomes.
+    converted: false,
+    commissionEarned: 0,
+  })), [realClickLogs]);
 
-  // ==================== MAIN WITHDRAWALS MANAGEMENT STATE ====================
-  const [withdrawalsSearch, setWithdrawalsSearch] = useState('');
-  const [withdrawalsTypeFilter, setWithdrawalsTypeFilter] = useState<'ALL' | 'Seller' | 'Affiliate'>('ALL');
-  const [withdrawalsStatusFilter, setWithdrawalsStatusFilter] = useState<'ALL' | 'Pending Approval' | 'Disbursed' | 'Rejected'>('ALL');
-  const [withdrawalsMainList, setWithdrawalsMainList] = useState([
-    {
-      id: 'WTH-901',
-      type: 'Affiliate' as 'Affiliate' | 'Seller',
-      requesterName: 'Limbani Phiri',
-      phone: '+265 991 234 567',
-      payoutMethod: 'Airtel Money',
-      accountNumber: '0991234567',
-      availableBalance: 122500,
-      requestedAmount: 100000,
-      requestDate: '2026-07-27 01:20',
-      status: 'Pending Approval' as 'Pending Approval' | 'Disbursed' | 'Rejected',
-      notes: 'Weekly commission cashout request'
-    },
-    {
-      id: 'WTH-902',
-      type: 'Seller' as 'Affiliate' | 'Seller',
-      requesterName: 'Kwatcha Electronics (Funsani Banda)',
-      phone: '+265 882 345 678',
-      payoutMethod: 'TNM Mpamba',
-      accountNumber: '0882345678',
-      availableBalance: 350000,
-      requestedAmount: 250000,
-      requestDate: '2026-07-26 19:45',
-      status: 'Pending Approval' as 'Pending Approval' | 'Disbursed' | 'Rejected',
-      notes: 'Order #ORD-8821 payout settlement'
-    },
-    {
-      id: 'WTH-903',
-      type: 'Affiliate' as 'Affiliate' | 'Seller',
-      requesterName: 'Memory Tembo',
-      phone: '+265 881 778 899',
-      payoutMethod: 'TNM Mpamba',
-      accountNumber: '0881778899',
-      availableBalance: 40000,
-      requestedAmount: 35000,
-      requestDate: '2026-07-26 14:10',
-      status: 'Pending Approval' as 'Pending Approval' | 'Disbursed' | 'Rejected',
-      notes: 'Promoter earnings withdrawal'
-    },
-    {
-      id: 'WTH-904',
-      type: 'Seller' as 'Affiliate' | 'Seller',
-      requesterName: 'Blantyre Luxury Boutique',
-      phone: '+265 993 332 211',
-      payoutMethod: 'Standard Bank',
-      accountNumber: 'Acc: 910023812',
-      availableBalance: 820000,
-      requestedAmount: 500000,
-      requestDate: '2026-07-25 11:30',
-      status: 'Disbursed' as 'Pending Approval' | 'Disbursed' | 'Rejected',
-      notes: 'Approved by SuperAdmin - Ref: STB-EFT-9910'
-    },
-    {
-      id: 'WTH-905',
-      type: 'Affiliate' as 'Affiliate' | 'Seller',
-      requesterName: 'Kondwani Mwale',
-      phone: '+265 995 876 543',
-      payoutMethod: 'National Bank',
-      accountNumber: 'Acc: 100392812',
-      availableBalance: 145000,
-      requestedAmount: 100000,
-      requestDate: '2026-07-25 09:15',
-      status: 'Disbursed' as 'Pending Approval' | 'Disbursed' | 'Rejected',
-      notes: 'Disbursed via EFT - Ref: NBM-49102'
-    },
-    {
-      id: 'WTH-906',
-      type: 'Seller' as 'Affiliate' | 'Seller',
-      requesterName: 'Lilongwe Auto Imports',
-      phone: '+265 999 445 566',
-      payoutMethod: 'Airtel Money',
-      accountNumber: '0999445566',
-      availableBalance: 1200000,
-      requestedAmount: 850000,
-      requestDate: '2026-07-24 16:50',
-      status: 'Pending Approval' as 'Pending Approval' | 'Disbursed' | 'Rejected',
-      notes: 'Car sale escrow release'
-    }
-  ]);
+  const withdrawalsMainList = useMemo(() => realWithdrawals.map((w: any) => ({
+    id: w.id,
+    type: w.withdrawal_type === 'affiliate' ? 'Affiliate' : 'Seller',
+    requesterName: w.affiliate_name || w.affiliate_email || 'User',
+    phone: w.payout_details?.phone || '',
+    payoutMethod: w.method,
+    accountNumber: w.payout_details?.account || w.payout_details?.phone || w.payout_details?.number || '',
+    availableBalance: w.amount,
+    requestedAmount: w.amount,
+    requestDate: w.created_at,
+    status: w.status === 'pending' ? 'Pending Approval' : w.status === 'approved' ? 'Disbursed' : 'Rejected',
+    notes: w.admin_note || '',
+  })), [realWithdrawals]);
 
   // ==================== PROMOTIONS & VOUCHERS STATE ====================
   const [promosSearch, setPromosSearch] = useState('');
   const [promosStatusFilter, setPromosStatusFilter] = useState<'ALL' | 'Active' | 'Paused' | 'Expired'>('ALL');
   const [isAddPromoModalOpen, setIsAddPromoModalOpen] = useState(false);
+  const [broadcastTitle, setBroadcastTitle] = useState('');
+  const [broadcastBody, setBroadcastBody] = useState('');
   const [editingPromo, setEditingPromo] = useState<any>(null);
   const [promoFormData, setPromoFormData] = useState({
     code: '',
@@ -644,143 +353,47 @@ export const AdminView: React.FC<AdminViewProps> = ({
     description: ''
   });
 
-  const [promosList, setPromosList] = useState([
-    {
-      id: 'PRM-101',
-      code: 'PA_MSIKA_10',
-      title: '10% Off Welcome Discount',
-      type: 'percentage' as 'percentage' | 'fixed',
-      discountValue: 10,
-      minSpend: 20000,
-      maxUsage: 500,
-      usedCount: 142,
-      startDate: '2026-07-01',
-      expiryDate: '2026-08-31',
-      applicableCategory: 'All Products',
-      status: 'Active' as 'Active' | 'Paused' | 'Expired',
-      description: 'Special 10% promotional discount for new Pa_mSika buyers.'
-    },
-    {
-      id: 'PRM-102',
-      code: 'DOLO5000',
-      title: 'MWK 5,000 Off Electronics',
-      type: 'fixed' as 'percentage' | 'fixed',
-      discountValue: 5000,
-      minSpend: 50000,
-      maxUsage: 200,
-      usedCount: 89,
-      startDate: '2026-07-15',
-      expiryDate: '2026-08-15',
-      applicableCategory: 'Electronics',
-      status: 'Active' as 'Active' | 'Paused' | 'Expired',
-      description: 'Flat MWK 5,000 off on all verified phones and laptops.'
-    },
-    {
-      id: 'PRM-103',
-      code: 'FASHION20',
-      title: '20% Off Luxury Fashion & Bags',
-      type: 'percentage' as 'percentage' | 'fixed',
-      discountValue: 20,
-      minSpend: 15000,
-      maxUsage: 300,
-      usedCount: 300,
-      startDate: '2026-06-01',
-      expiryDate: '2026-07-01',
-      applicableCategory: 'Fashion',
-      status: 'Expired' as 'Active' | 'Paused' | 'Expired',
-      description: 'Mid-year fashion promo for clothing, footwear, and luxury bags.'
-    },
-    {
-      id: 'PRM-104',
-      code: 'AUTO100K',
-      title: 'MWK 100,000 Off Verified Automobiles',
-      type: 'fixed' as 'percentage' | 'fixed',
-      discountValue: 100000,
-      minSpend: 2000000,
-      maxUsage: 50,
-      usedCount: 12,
-      startDate: '2026-07-10',
-      expiryDate: '2026-09-30',
-      applicableCategory: 'Automobiles',
-      status: 'Active' as 'Active' | 'Paused' | 'Expired',
-      description: 'Exclusive buyer voucher for certified Toyota & Mazda vehicles.'
-    }
-  ]);
+  const promosList = useMemo(() => realPromos.map((p: any) => {
+    const expired = p.expires_at && new Date(p.expires_at) < new Date();
+    return {
+      id: p.id,
+      code: p.code,
+      title: p.title || p.code,
+      type: p.discount_type as 'percentage' | 'fixed',
+      discountValue: p.discount_percent,
+      minSpend: p.min_spend || 0,
+      maxUsage: p.max_uses || 0,
+      usedCount: p.uses || 0,
+      startDate: (p.created_at || '').slice(0, 10),
+      expiryDate: (p.expires_at || '').slice(0, 10),
+      applicableCategory: p.applicable_category || 'All Products',
+      status: !p.is_active ? 'Paused' : expired ? 'Expired' : 'Active',
+      description: p.description || '',
+    };
+  }), [realPromos]);
 
   // ==================== INBOX / MESSAGES STATE ====================
   const [inboxSearch, setInboxSearch] = useState('');
   const [inboxRoleFilter, setInboxRoleFilter] = useState<'ALL' | 'Unread' | 'Seller' | 'Buyer' | 'Affiliate'>('ALL');
   const [selectedInboxMsg, setSelectedInboxMsg] = useState<any>(null);
+
+  // Keep the open conversation's detail panel in sync once `inbox` (realInbox)
+  // is refreshed from the backend after a reply/resolve, instead of showing
+  // a stale locally-patched copy until the user re-clicks it.
+  useEffect(() => {
+    if (!selectedInboxMsg) return;
+    const fresh = realInbox.find((m: any) => m.id === selectedInboxMsg.id);
+    if (fresh) {
+      setSelectedInboxMsg((prev: any) => {
+        const freshAdapted = { ...fresh };
+        return JSON.stringify(prev) === JSON.stringify(freshAdapted) ? prev : freshAdapted;
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [realInbox]);
   const [adminReplyInput, setAdminReplyInput] = useState('');
 
-  const [inboxList, setInboxList] = useState([
-    {
-      id: 'MSG-401',
-      senderName: 'Funsani Banda (Kwatcha Electronics)',
-      senderRole: 'Seller' as 'Seller' | 'Buyer' | 'Affiliate',
-      phone: '+265 882 345 678',
-      email: 'kwatcha.electronics@gmail.com',
-      category: 'Verification',
-      subject: 'Request for Merchant Verification Badge Upgrade',
-      message: 'Hello Admin, I have submitted my Business Registration certificate and National ID copy. Please review and verify my store account so I can start posting high-value laptops.',
-      timestamp: '2026-07-27 01:45',
-      isRead: false,
-      status: 'Open' as 'Open' | 'In Progress' | 'Resolved',
-      priority: 'High' as 'High' | 'Medium' | 'Normal' | 'Urgent',
-      replies: [
-        { sender: 'Funsani Banda', text: 'Attached my documents to my seller profile.', time: '2026-07-27 01:45' }
-      ]
-    },
-    {
-      id: 'MSG-402',
-      senderName: 'Limbani Phiri',
-      senderRole: 'Affiliate' as 'Seller' | 'Buyer' | 'Affiliate',
-      phone: '+265 991 234 567',
-      email: 'limbani.phiri@gmail.com',
-      category: 'Commission Inquiry',
-      subject: 'Withdrawal Approval Status for Request #WTH-901',
-      message: 'Hi Admin, I requested MWK 100,000 withdrawal yesterday to Airtel Money. Could you please check when it will be processed? Thank you!',
-      timestamp: '2026-07-26 21:10',
-      isRead: false,
-      status: 'Open' as 'Open' | 'In Progress' | 'Resolved',
-      priority: 'Medium' as 'High' | 'Medium' | 'Normal' | 'Urgent',
-      replies: []
-    },
-    {
-      id: 'MSG-403',
-      senderName: 'Chifundo Mvula',
-      senderRole: 'Buyer' as 'Seller' | 'Buyer' | 'Affiliate',
-      phone: '+265 999 112 233',
-      email: 'chifundo.mvula@yahoo.com',
-      category: 'Order Dispute',
-      subject: 'Non-delivery of Smart Watch Order #ORD-8820',
-      message: 'Good day. I paid for a Smart Watch 3 days ago but the seller has not dispatched the item yet. Please assist me with escrow refund or contact the seller.',
-      timestamp: '2026-07-26 16:30',
-      isRead: true,
-      status: 'In Progress' as 'Open' | 'In Progress' | 'Resolved',
-      priority: 'Urgent' as 'High' | 'Medium' | 'Normal' | 'Urgent',
-      replies: [
-        { sender: 'Admin Support', text: 'We have contacted the seller to dispatch immediately or trigger a full refund.', time: '2026-07-26 17:00' }
-      ]
-    },
-    {
-      id: 'MSG-404',
-      senderName: 'Blantyre Luxury Boutique',
-      senderRole: 'Seller' as 'Seller' | 'Buyer' | 'Affiliate',
-      phone: '+265 993 332 211',
-      email: 'contact@blantyereluxury.mw',
-      category: 'Product Approval',
-      subject: 'Listing Approval for Designer Leather Handbags',
-      message: 'Greetings! We uploaded 5 new luxury leather bags. Kindly inspect and approve them for public listing on the homepage.',
-      timestamp: '2026-07-25 14:00',
-      isRead: true,
-      status: 'Resolved' as 'Open' | 'In Progress' | 'Resolved',
-      priority: 'Normal' as 'High' | 'Medium' | 'Normal' | 'Urgent',
-      replies: [
-        { sender: 'Admin Support', text: 'All 5 products have been approved and are now live!', time: '2026-07-25 15:20' }
-      ]
-    }
-  ]);
+  const inboxList = realInbox;
 
   // Excel CSV Exporter Utility
   const handleExportToExcel = (
@@ -817,42 +430,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const handleApproveAffiliateWithdrawal = (wthId: string) => {
     const wth = affiliateWithdrawalsList.find((w) => w.id === wthId);
     if (!wth) return;
-
-    // Create payment log
-    const newPayment = {
-      id: `PAY-${Math.floor(1000 + Math.random() * 9000)}`,
-      date: new Date().toISOString().replace('T', ' ').slice(0, 16),
-      affiliateId: wth.affiliateId,
-      affiliateName: wth.affiliateName,
-      phone: wth.phone,
-      payoutChannel: wth.payoutMethod,
-      accountDetails: wth.accountNumber,
-      amountPaid: wth.requestedAmount,
-      transactionRef: `TXN-${wth.payoutMethod.toUpperCase().slice(0, 3)}-${Math.floor(100000 + Math.random() * 900000)}`,
-      salesPeriod: 'Instant Admin Payout Approval',
-      disbursedBy: 'Admin (SuperAdmin)',
-      status: 'Completed'
-    };
-
-    setCommissionPaidList((prev) => [newPayment, ...prev]);
-
-    // Update withdrawal status
-    setAffiliateWithdrawalsList((prev) =>
-      prev.map((w) => (w.id === wthId ? { ...w, status: 'Paid' } : w))
-    );
-
-    // Update affiliate balance & total withdrawn
-    setAffiliatesList((prev) =>
-      prev.map((aff) => {
-        if (aff.id === wth.affiliateId) {
-          const newBal = Math.max(0, aff.currentBalance - wth.requestedAmount);
-          const newWithdrawn = aff.totalWithdrawn + wth.requestedAmount;
-          return { ...aff, currentBalance: newBal, totalWithdrawn: newWithdrawn };
-        }
-        return aff;
-      })
-    );
-
+    onApproveWithdrawal?.(wthId);
     onShowToast(`Payout of MWK ${wth.requestedAmount.toLocaleString()} approved for ${wth.affiliateName}!`);
   };
 
@@ -860,19 +438,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const handleApproveMainWithdrawal = (wthId: string) => {
     const item = withdrawalsMainList.find((w) => w.id === wthId);
     if (!item) return;
-
-    setWithdrawalsMainList((prev) =>
-      prev.map((w) =>
-        w.id === wthId
-          ? {
-              ...w,
-              status: 'Disbursed',
-              notes: `Disbursed individually by Admin on ${new Date().toLocaleDateString()}`
-            }
-          : w
-      )
-    );
-
+    onApproveWithdrawal?.(wthId);
     onShowToast(`Disbursed MWK ${item.requestedAmount.toLocaleString()} to ${item.requesterName} via ${item.payoutMethod}!`);
   };
 
@@ -880,19 +446,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const handleRejectMainWithdrawal = (wthId: string) => {
     const item = withdrawalsMainList.find((w) => w.id === wthId);
     if (!item) return;
-
-    setWithdrawalsMainList((prev) =>
-      prev.map((w) =>
-        w.id === wthId
-          ? {
-              ...w,
-              status: 'Rejected',
-              notes: `Rejected by Admin on ${new Date().toLocaleDateString()}`
-            }
-          : w
-      )
-    );
-
+    onRejectWithdrawal?.(wthId);
     onShowToast(`Withdrawal request ${wthId} for ${item.requesterName} rejected.`);
   };
 
@@ -905,46 +459,24 @@ export const AdminView: React.FC<AdminViewProps> = ({
     }
 
     const cleanCode = promoFormData.code.toUpperCase().replace(/\s+/g, '');
+    const data = {
+      code: cleanCode,
+      title: promoFormData.title,
+      discount_type: promoFormData.type,
+      discount_percent: Number(promoFormData.discountValue) || 0,
+      min_spend: Number(promoFormData.minSpend) || 0,
+      max_uses: Number(promoFormData.maxUsage) || 100,
+      expires_at: promoFormData.expiryDate ? new Date(promoFormData.expiryDate).toISOString() : null,
+      applicable_category: promoFormData.applicableCategory,
+      description: promoFormData.description,
+    };
 
     if (editingPromo) {
-      setPromosList((prev) =>
-        prev.map((p) =>
-          p.id === editingPromo.id
-            ? {
-                ...p,
-                code: cleanCode,
-                title: promoFormData.title,
-                type: promoFormData.type,
-                discountValue: Number(promoFormData.discountValue) || 0,
-                minSpend: Number(promoFormData.minSpend) || 0,
-                maxUsage: Number(promoFormData.maxUsage) || 100,
-                startDate: promoFormData.startDate,
-                expiryDate: promoFormData.expiryDate,
-                applicableCategory: promoFormData.applicableCategory,
-                description: promoFormData.description
-              }
-            : p
-        )
-      );
+      onUpdatePromo?.(editingPromo.id, data);
       onShowToast(`Promotion "${cleanCode}" updated successfully!`);
     } else {
-      const newPromo = {
-        id: `PRM-${Math.floor(100 + Math.random() * 900)}`,
-        code: cleanCode,
-        title: promoFormData.title,
-        type: promoFormData.type,
-        discountValue: Number(promoFormData.discountValue) || 0,
-        minSpend: Number(promoFormData.minSpend) || 0,
-        maxUsage: Number(promoFormData.maxUsage) || 100,
-        usedCount: 0,
-        startDate: promoFormData.startDate,
-        expiryDate: promoFormData.expiryDate,
-        applicableCategory: promoFormData.applicableCategory,
-        status: 'Active' as const,
-        description: promoFormData.description
-      };
-      setPromosList((prev) => [newPromo, ...prev]);
-      onShowToast(`New Promotion "${newPromo.code}" created and activated!`);
+      onCreatePromo?.(data);
+      onShowToast(`New Promotion "${cleanCode}" created and activated!`);
     }
 
     setIsAddPromoModalOpen(false);
@@ -952,20 +484,15 @@ export const AdminView: React.FC<AdminViewProps> = ({
   };
 
   const handleTogglePromoStatus = (promoId: string) => {
-    setPromosList((prev) =>
-      prev.map((p) => {
-        if (p.id === promoId) {
-          const nextStatus = p.status === 'Active' ? 'Paused' : 'Active';
-          onShowToast(`Promo ${p.code} status changed to ${nextStatus}.`);
-          return { ...p, status: nextStatus };
-        }
-        return p;
-      })
-    );
+    const p = promosList.find((x) => x.id === promoId);
+    if (!p) return;
+    const nextActive = p.status !== 'Active';
+    onTogglePromo?.(promoId, nextActive);
+    onShowToast(`Promo ${p.code} status changed to ${nextActive ? 'Active' : 'Paused'}.`);
   };
 
   const handleDeletePromo = (promoId: string) => {
-    setPromosList((prev) => prev.filter((p) => p.id !== promoId));
+    onDeletePromo?.(promoId);
     onShowToast(`Promotion removed successfully.`);
   };
 
@@ -974,28 +501,10 @@ export const AdminView: React.FC<AdminViewProps> = ({
     e.preventDefault();
     if (!selectedInboxMsg || !adminReplyInput.trim()) return;
 
-    const newReply = {
-      sender: 'Admin Support',
-      text: adminReplyInput.trim(),
-      time: new Date().toISOString().replace('T', ' ').slice(0, 16)
-    };
-
-    setInboxList((prev) =>
-      prev.map((m) => {
-        if (m.id === selectedInboxMsg.id) {
-          return {
-            ...m,
-            isRead: true,
-            status: 'In Progress',
-            replies: [...m.replies, newReply]
-          };
-        }
-        return m;
-      })
-    );
+    onReplyInbox?.(selectedInboxMsg.id, adminReplyInput.trim());
 
     setSelectedInboxMsg((prev: any) =>
-      prev ? { ...prev, isRead: true, status: 'In Progress', replies: [...prev.replies, newReply] } : null
+      prev ? { ...prev, isRead: true, status: 'In Progress' } : null
     );
 
     setAdminReplyInput('');
@@ -1003,15 +512,13 @@ export const AdminView: React.FC<AdminViewProps> = ({
   };
 
   const handleToggleReadStatus = (msgId: string) => {
-    setInboxList((prev) =>
-      prev.map((m) => (m.id === msgId ? { ...m, isRead: !m.isRead } : m))
-    );
+    const m = inboxList.find((x: any) => x.id === msgId);
+    if (!m) return;
+    onSetInboxRead?.(msgId, !m.isRead);
   };
 
   const handleResolveMessage = (msgId: string) => {
-    setInboxList((prev) =>
-      prev.map((m) => (m.id === msgId ? { ...m, status: 'Resolved', isRead: true } : m))
-    );
+    onResolveInbox?.(msgId, true);
     if (selectedInboxMsg && selectedInboxMsg.id === msgId) {
       setSelectedInboxMsg((prev: any) => (prev ? { ...prev, status: 'Resolved', isRead: true } : null));
     }
@@ -1019,11 +526,11 @@ export const AdminView: React.FC<AdminViewProps> = ({
   };
 
   const handleDeleteMessage = (msgId: string) => {
-    setInboxList((prev) => prev.filter((m) => m.id !== msgId));
+    onDeleteInbox?.(msgId);
     if (selectedInboxMsg && selectedInboxMsg.id === msgId) {
       setSelectedInboxMsg(null);
     }
-    onShowToast('Message deleted.');
+    onShowToast('Conversation deleted.');
   };
 
   // Business Analytics timeframe state
@@ -3655,8 +3162,10 @@ export const AdminView: React.FC<AdminViewProps> = ({
                                 <td className="p-4 text-center">
                                   <span
                                     className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase ${
-                                      w.status === 'Paid'
+                                      w.status === 'Approved'
                                         ? 'bg-emerald-100 text-emerald-800'
+                                        : w.status === 'Rejected'
+                                        ? 'bg-rose-100 text-rose-700'
                                         : 'bg-amber-100 text-amber-800 animate-pulse'
                                     }`}
                                   >
@@ -3665,16 +3174,29 @@ export const AdminView: React.FC<AdminViewProps> = ({
                                 </td>
                                 <td className="p-4 text-right">
                                   {w.status === 'Pending Approval' ? (
-                                    <button
-                                      onClick={() => handleApproveAffiliateWithdrawal(w.id)}
-                                      className="px-3 py-1.5 bg-[#5300b7] hover:bg-[#6d28d9] text-white font-bold text-[10px] rounded-xl transition-all shadow-xs cursor-pointer uppercase tracking-wider"
-                                    >
-                                      Approve &amp; Pay
-                                    </button>
-                                  ) : (
+                                    <div className="flex gap-1.5 justify-end">
+                                      <button
+                                        onClick={() => handleApproveAffiliateWithdrawal(w.id)}
+                                        className="px-3 py-1.5 bg-[#5300b7] hover:bg-[#6d28d9] text-white font-bold text-[10px] rounded-xl transition-all shadow-xs cursor-pointer uppercase tracking-wider"
+                                      >
+                                        Approve &amp; Pay
+                                      </button>
+                                      <button
+                                        onClick={() => onRejectWithdrawal?.(w.id)}
+                                        className="px-3 py-1.5 bg-white border border-rose-300 text-rose-600 font-bold text-[10px] rounded-xl transition-all cursor-pointer uppercase tracking-wider"
+                                      >
+                                        Reject
+                                      </button>
+                                    </div>
+                                  ) : w.status === 'Approved' ? (
                                     <span className="text-[10px] font-bold text-emerald-700 flex items-center justify-end gap-1">
                                       <span className="material-symbols-outlined text-[14px]">check_circle</span>
                                       Disbursed
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] font-bold text-rose-600 flex items-center justify-end gap-1">
+                                      <span className="material-symbols-outlined text-[14px]">cancel</span>
+                                      Rejected
                                     </span>
                                   )}
                                 </td>
@@ -3762,88 +3284,301 @@ export const AdminView: React.FC<AdminViewProps> = ({
           })()}
 
           {/* ==================== WITHDRAWALS TAB ==================== */}
-          {activeNav === 'withdrawals' && (
-            <div className="bg-white rounded-3xl p-6 border border-[#ccc3d7]/40 shadow-xs space-y-4">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="font-serif-source text-2xl font-bold text-[#1d1a24]">Seller &amp; Affiliate Withdrawals</h3>
-                  <p className="text-xs text-[#4a4455]">Review and disburse payout requests via Mobile Money or Bank Transfer.</p>
+          {activeNav === 'withdrawals' && (() => {
+            const pending = withdrawalsMainList.filter((w: any) => w.status === 'Pending Approval');
+            const pendingTotal = pending.reduce((s: number, w: any) => s + (w.requestedAmount || 0), 0);
+            return (
+              <div className="bg-white rounded-3xl p-6 border border-[#ccc3d7]/40 shadow-xs space-y-4">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="font-serif-source text-2xl font-bold text-[#1d1a24]">Seller &amp; Affiliate Withdrawals</h3>
+                    <p className="text-xs text-[#4a4455]">Review and disburse payout requests via Mobile Money or Bank Transfer.</p>
+                  </div>
+                  <span className="px-3 py-1 bg-rose-100 text-rose-700 font-extrabold text-xs rounded-full">
+                    {pending.length} PENDING REQUESTS
+                  </span>
                 </div>
-                <span className="px-3 py-1 bg-rose-100 text-rose-700 font-extrabold text-xs rounded-full">
-                  14 PENDING REQUESTS
-                </span>
-              </div>
 
-              <div className="p-6 bg-amber-50 rounded-2xl border border-amber-200 space-y-2">
-                <p className="font-bold text-xs text-amber-900">Immediate Settlement Notice</p>
-                <p className="text-xs text-amber-800">
-                  Total payout volume pending approval: <span className="font-bold">MWK 450,000</span> across Airtel Money &amp; TNM Mpamba.
-                </p>
-                <button
-                  onClick={() => onShowToast('Approved batch withdrawal payout!')}
-                  className="mt-2 bg-[#5300b7] text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-[#6d28d9] cursor-pointer"
-                >
-                  PROCESS ALL BATCH PAYOUTS
-                </button>
+                {pending.length > 0 && (
+                  <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 space-y-1">
+                    <p className="font-bold text-xs text-amber-900">Pending Payout Volume</p>
+                    <p className="text-xs text-amber-800">
+                      Total awaiting approval: <span className="font-bold">MWK {pendingTotal.toLocaleString()}</span> across {pending.length} request{pending.length !== 1 ? 's' : ''}.
+                    </p>
+                  </div>
+                )}
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="text-left text-[#7b7486] border-b border-[#ccc3d7]/40">
+                        <th className="py-2 pr-3">Requester</th>
+                        <th className="py-2 pr-3">Type</th>
+                        <th className="py-2 pr-3">Method</th>
+                        <th className="py-2 pr-3">Amount</th>
+                        <th className="py-2 pr-3">Status</th>
+                        <th className="py-2 pr-3">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {withdrawalsMainList.length === 0 && (
+                        <tr><td colSpan={6} className="py-6 text-center text-[#7b7486]">No withdrawal requests yet.</td></tr>
+                      )}
+                      {withdrawalsMainList.map((w: any) => (
+                        <tr key={w.id} className="border-b border-[#ccc3d7]/20">
+                          <td className="py-2 pr-3 font-semibold text-[#1d1a24]">{w.requesterName}</td>
+                          <td className="py-2 pr-3">{w.type}</td>
+                          <td className="py-2 pr-3">{w.payoutMethod} · {w.accountNumber}</td>
+                          <td className="py-2 pr-3 font-bold">MWK {(w.requestedAmount || 0).toLocaleString()}</td>
+                          <td className="py-2 pr-3">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              w.status === 'Disbursed' ? 'bg-emerald-100 text-emerald-700' :
+                              w.status === 'Rejected' ? 'bg-rose-100 text-rose-700' :
+                              'bg-amber-100 text-amber-700'
+                            }`}>{w.status}</span>
+                          </td>
+                          <td className="py-2 pr-3">
+                            {w.status === 'Pending Approval' ? (
+                              <div className="flex gap-1.5">
+                                <button onClick={() => handleApproveMainWithdrawal(w.id)} className="px-2.5 py-1 bg-[#5300b7] text-white rounded-lg text-[10px] font-bold hover:bg-[#6d28d9]">Approve</button>
+                                <button onClick={() => handleRejectMainWithdrawal(w.id)} className="px-2.5 py-1 bg-white border border-rose-300 text-rose-600 rounded-lg text-[10px] font-bold hover:bg-rose-50">Reject</button>
+                              </div>
+                            ) : (
+                              <span className="text-[#7b7486]">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* ==================== USERS TAB ==================== */}
           {activeNav === 'users' && (
             <div className="bg-white rounded-3xl p-6 border border-[#ccc3d7]/40 shadow-xs space-y-4">
               <h3 className="font-serif-source text-2xl font-bold text-[#1d1a24]">User Accounts &amp; Access Control</h3>
               <p className="text-xs text-[#4a4455]">
-                12,500 registered buyer and seller accounts across Lilongwe, Blantyre, Mzuzu, and Zomba.
+                {totalUsers.toLocaleString()} registered accounts platform-wide.
               </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2">
+                <div className="bg-[#eff4ff] rounded-2xl p-4">
+                  <p className="text-[10px] font-bold text-[#7b7486] uppercase">Total Users</p>
+                  <p className="text-xl font-bold text-[#1d1a24]">{totalUsers.toLocaleString()}</p>
+                </div>
+                <div className="bg-[#eff4ff] rounded-2xl p-4">
+                  <p className="text-[10px] font-bold text-[#7b7486] uppercase">Active Sellers</p>
+                  <p className="text-xl font-bold text-[#1d1a24]">{sellers.length.toLocaleString()}</p>
+                </div>
+                <div className="bg-[#eff4ff] rounded-2xl p-4">
+                  <p className="text-[10px] font-bold text-[#7b7486] uppercase">Affiliates</p>
+                  <p className="text-xl font-bold text-[#1d1a24]">{affiliatesList.length.toLocaleString()}</p>
+                </div>
+              </div>
             </div>
           )}
 
           {/* ==================== PROMOS TAB ==================== */}
           {activeNav === 'promos' && (
             <div className="bg-white rounded-3xl p-6 border border-[#ccc3d7]/40 shadow-xs space-y-4">
-              <h3 className="font-serif-source text-2xl font-bold text-[#1d1a24]">Promotional Campaigns &amp; Vouchers</h3>
-              <p className="text-xs text-[#4a4455]">
-                Manage discount vouchers, zero-commission seller periods, and holiday banners.
-              </p>
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="font-serif-source text-2xl font-bold text-[#1d1a24]">Promotional Campaigns &amp; Vouchers</h3>
+                  <p className="text-xs text-[#4a4455]">Manage discount voucher codes redeemable at checkout.</p>
+                </div>
+                <button
+                  onClick={() => { setEditingPromo(null); setPromoFormData({ code: '', title: '', type: 'percentage', discountValue: '', minSpend: '', maxUsage: '', startDate: '', expiryDate: '', applicableCategory: 'All Products', description: '' }); setIsAddPromoModalOpen(true); }}
+                  className="px-4 py-2 bg-[#5300b7] text-white rounded-xl text-xs font-bold hover:bg-[#6d28d9]"
+                >
+                  + New Promo Code
+                </button>
+              </div>
+
+              {isAddPromoModalOpen && (
+                <form onSubmit={handleSavePromoForm} className="p-4 bg-[#fef7ff] rounded-2xl border border-[#ccc3d7]/40 grid grid-cols-2 gap-3">
+                  <input required disabled={!!editingPromo} placeholder="CODE (e.g. PAMSIKA10)" value={promoFormData.code} onChange={(e) => setPromoFormData({ ...promoFormData, code: e.target.value })} className="col-span-2 bg-white border border-[#ccc3d7] rounded-xl px-3 py-2 text-xs font-bold disabled:bg-slate-100 disabled:text-slate-500" />
+                  <input required placeholder="Title" value={promoFormData.title} onChange={(e) => setPromoFormData({ ...promoFormData, title: e.target.value })} className="col-span-2 bg-white border border-[#ccc3d7] rounded-xl px-3 py-2 text-xs" />
+                  <select value={promoFormData.type} onChange={(e) => setPromoFormData({ ...promoFormData, type: e.target.value })} className="bg-white border border-[#ccc3d7] rounded-xl px-3 py-2 text-xs">
+                    <option value="percentage">Percentage %</option>
+                    <option value="fixed">Fixed MWK</option>
+                  </select>
+                  <input required type="number" placeholder="Discount value" value={promoFormData.discountValue} onChange={(e) => setPromoFormData({ ...promoFormData, discountValue: e.target.value })} className="bg-white border border-[#ccc3d7] rounded-xl px-3 py-2 text-xs" />
+                  <input type="number" placeholder="Min spend (MWK)" value={promoFormData.minSpend} onChange={(e) => setPromoFormData({ ...promoFormData, minSpend: e.target.value })} className="bg-white border border-[#ccc3d7] rounded-xl px-3 py-2 text-xs" />
+                  <input type="number" placeholder="Max uses" value={promoFormData.maxUsage} onChange={(e) => setPromoFormData({ ...promoFormData, maxUsage: e.target.value })} className="bg-white border border-[#ccc3d7] rounded-xl px-3 py-2 text-xs" />
+                  <input type="date" value={promoFormData.expiryDate} onChange={(e) => setPromoFormData({ ...promoFormData, expiryDate: e.target.value })} className="col-span-2 bg-white border border-[#ccc3d7] rounded-xl px-3 py-2 text-xs" />
+                  <div className="col-span-2 flex gap-2 justify-end">
+                    <button type="button" onClick={() => { setIsAddPromoModalOpen(false); setEditingPromo(null); }} className="px-4 py-2 bg-white border border-[#ccc3d7] rounded-xl text-xs font-bold">Cancel</button>
+                    <button type="submit" className="px-4 py-2 bg-[#5300b7] text-white rounded-xl text-xs font-bold hover:bg-[#6d28d9]">{editingPromo ? 'Save Changes' : 'Save Promo'}</button>
+                  </div>
+                </form>
+              )}
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-left text-[#7b7486] border-b border-[#ccc3d7]/40">
+                      <th className="py-2 pr-3">Code</th>
+                      <th className="py-2 pr-3">Discount</th>
+                      <th className="py-2 pr-3">Used / Max</th>
+                      <th className="py-2 pr-3">Expires</th>
+                      <th className="py-2 pr-3">Status</th>
+                      <th className="py-2 pr-3">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {promosList.length === 0 && (
+                      <tr><td colSpan={6} className="py-6 text-center text-[#7b7486]">No promo codes yet — create one above.</td></tr>
+                    )}
+                    {promosList.map((p: any) => (
+                      <tr key={p.id} className="border-b border-[#ccc3d7]/20">
+                        <td className="py-2 pr-3 font-bold text-[#5300b7]">{p.code}</td>
+                        <td className="py-2 pr-3">{p.type === 'fixed' ? `MWK ${p.discountValue}` : `${p.discountValue}%`}</td>
+                        <td className="py-2 pr-3">{p.usedCount} / {p.maxUsage || '∞'}</td>
+                        <td className="py-2 pr-3">{p.expiryDate || '—'}</td>
+                        <td className="py-2 pr-3">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${p.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : p.status === 'Expired' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'}`}>{p.status}</span>
+                        </td>
+                        <td className="py-2 pr-3 flex gap-1.5">
+                          <button
+                            onClick={() => {
+                              setEditingPromo(p);
+                              setPromoFormData({
+                                code: p.code,
+                                title: p.title,
+                                type: p.type,
+                                discountValue: String(p.discountValue),
+                                minSpend: String(p.minSpend),
+                                maxUsage: String(p.maxUsage),
+                                startDate: p.startDate,
+                                expiryDate: p.expiryDate,
+                                applicableCategory: p.applicableCategory,
+                                description: p.description,
+                              });
+                              setIsAddPromoModalOpen(true);
+                            }}
+                            className="px-2.5 py-1 bg-white border border-[#ccc3d7] rounded-lg text-[10px] font-bold hover:bg-[#eff4ff]"
+                          >
+                            Edit
+                          </button>
+                          <button onClick={() => handleTogglePromoStatus(p.id)} className="px-2.5 py-1 bg-white border border-[#ccc3d7] rounded-lg text-[10px] font-bold hover:bg-[#eff4ff]">
+                            {p.status === 'Active' ? 'Pause' : 'Activate'}
+                          </button>
+                          <button onClick={() => handleDeletePromo(p.id)} className="px-2.5 py-1 bg-white border border-rose-300 text-rose-600 rounded-lg text-[10px] font-bold hover:bg-rose-50">Delete</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
           {/* ==================== NOTIFY TAB ==================== */}
           {activeNav === 'notify' && (
             <div className="bg-white rounded-3xl p-6 border border-[#ccc3d7]/40 shadow-xs space-y-4">
-              <h3 className="font-serif-source text-2xl font-bold text-[#1d1a24]">System Broadcasts &amp; SMS Alerts</h3>
-              <p className="text-xs text-[#4a4455]">
-                Send push notifications and SMS updates directly to sellers or buyers.
-              </p>
-              <div className="space-y-3 pt-2 max-w-lg">
-                <input
-                  type="text"
-                  placeholder="Broadcast Headline..."
-                  className="w-full bg-[#fef7ff] border border-[#ccc3d7] rounded-xl px-3 py-2 text-xs font-bold"
-                />
-                <textarea
-                  rows={3}
-                  placeholder="Type broadcast announcement text..."
-                  className="w-full bg-[#fef7ff] border border-[#ccc3d7] rounded-xl p-3 text-xs"
-                />
-                <button
-                  onClick={() => onShowToast('Broadcast notification sent to all active users!')}
-                  className="bg-[#5300b7] text-white px-5 py-2.5 rounded-xl text-xs font-bold hover:bg-[#6d28d9] cursor-pointer"
-                >
-                  SEND BROADCAST NOW
-                </button>
+              <h3 className="font-serif-source text-2xl font-bold text-[#1d1a24]">System Broadcasts</h3>
+                <p className="text-xs text-[#4a4455]">
+                  Send a push notification to every subscribed user's device.
+                </p>
+                <div className="space-y-3 pt-2 max-w-lg">
+                  <input
+                    type="text"
+                    value={broadcastTitle}
+                    onChange={(e) => setBroadcastTitle(e.target.value)}
+                    placeholder="Broadcast Headline..."
+                    className="w-full bg-[#fef7ff] border border-[#ccc3d7] rounded-xl px-3 py-2 text-xs font-bold"
+                  />
+                  <textarea
+                    rows={3}
+                    value={broadcastBody}
+                    onChange={(e) => setBroadcastBody(e.target.value)}
+                    placeholder="Type broadcast announcement text..."
+                    className="w-full bg-[#fef7ff] border border-[#ccc3d7] rounded-xl p-3 text-xs"
+                  />
+                  <button
+                    onClick={() => {
+                      if (!broadcastTitle.trim() || !broadcastBody.trim()) {
+                        onShowToast('Add a headline and message first.');
+                        return;
+                      }
+                      onSendBroadcast?.(broadcastTitle.trim(), broadcastBody.trim());
+                      setBroadcastTitle('');
+                      setBroadcastBody('');
+                    }}
+                    className="bg-[#5300b7] text-white px-5 py-2.5 rounded-xl text-xs font-bold hover:bg-[#6d28d9] cursor-pointer"
+                  >
+                    SEND BROADCAST NOW
+                  </button>
               </div>
             </div>
           )}
 
           {/* ==================== INBOX TAB ==================== */}
           {activeNav === 'inbox' && (
-            <div className="bg-white rounded-3xl p-6 border border-[#ccc3d7]/40 shadow-xs space-y-4">
-              <h3 className="font-serif-source text-2xl font-bold text-[#1d1a24]">Support &amp; Admin Inbox</h3>
-              <p className="text-xs text-[#4a4455]">
-                Review customer inquiries, seller dispute tickets, and system automated logs.
-              </p>
+            <div className="bg-white rounded-3xl border border-[#ccc3d7]/40 shadow-xs grid grid-cols-1 md:grid-cols-5 overflow-hidden" style={{ minHeight: 420 }}>
+              <div className="md:col-span-2 border-r border-[#ccc3d7]/30 overflow-y-auto max-h-[520px]">
+                <div className="p-4 border-b border-[#ccc3d7]/30">
+                  <h3 className="font-serif-source text-lg font-bold text-[#1d1a24]">Support &amp; Admin Inbox</h3>
+                  <p className="text-[10px] text-[#7b7486]">{inboxList.length} conversation{inboxList.length !== 1 ? 's' : ''}</p>
+                </div>
+                {inboxList.length === 0 && (
+                  <p className="p-6 text-xs text-center text-[#7b7486]">No customer conversations yet.</p>
+                )}
+                {inboxList.map((m: any) => (
+                  <button
+                    key={m.id}
+                    onClick={() => setSelectedInboxMsg(m)}
+                    className={`w-full text-left p-4 border-b border-[#ccc3d7]/20 hover:bg-[#eff4ff] transition-colors ${selectedInboxMsg?.id === m.id ? 'bg-[#eff4ff]' : ''}`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <span className={`text-xs ${m.isRead ? 'font-semibold' : 'font-bold'} text-[#1d1a24]`}>{m.senderName}</span>
+                      <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold ${m.status === 'Resolved' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{m.status}</span>
+                    </div>
+                    <p className="text-[10px] text-[#7b7486] truncate">{m.subject}</p>
+                    <p className="text-[10px] text-[#4a4455] truncate">{m.message}</p>
+                  </button>
+                ))}
+              </div>
+              <div className="md:col-span-3 flex flex-col p-4">
+                {!selectedInboxMsg ? (
+                  <p className="m-auto text-xs text-[#7b7486]">Select a conversation to view and reply.</p>
+                ) : (
+                  <>
+                    <div className="flex justify-between items-start pb-3 border-b border-[#ccc3d7]/30 mb-3">
+                      <div>
+                        <p className="font-bold text-sm text-[#1d1a24]">{selectedInboxMsg.senderName}</p>
+                        <p className="text-[10px] text-[#7b7486]">{selectedInboxMsg.email} {selectedInboxMsg.phone && `· ${selectedInboxMsg.phone}`}</p>
+                      </div>
+                      <div className="flex gap-1.5">
+                        <button onClick={() => handleToggleReadStatus(selectedInboxMsg.id)} className="px-2.5 py-1 bg-white border border-[#ccc3d7] text-[#4a4455] rounded-lg text-[10px] font-bold hover:bg-[#eff4ff]">
+                          Mark {selectedInboxMsg.isRead ? 'Unread' : 'Read'}
+                        </button>
+                        <button onClick={() => handleResolveMessage(selectedInboxMsg.id)} className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-[10px] font-bold hover:bg-emerald-100">Mark Resolved</button>
+                        <button onClick={() => handleDeleteMessage(selectedInboxMsg.id)} className="px-2.5 py-1 bg-rose-50 text-rose-600 rounded-lg text-[10px] font-bold hover:bg-rose-100">Delete</button>
+                      </div>
+                    </div>
+                    <div className="flex-1 overflow-y-auto space-y-2 mb-3">
+                      <div className="bg-[#eff4ff] rounded-xl p-3 text-xs text-[#1d1a24] max-w-[85%]">{selectedInboxMsg.message}</div>
+                      {(selectedInboxMsg.replies || []).map((r: any, i: number) => (
+                        <div key={i} className={`rounded-xl p-3 text-xs max-w-[85%] ${r.sender === 'Admin Support' ? 'bg-[#5300b7] text-white ml-auto' : 'bg-[#eff4ff] text-[#1d1a24]'}`}>
+                          {r.text}
+                        </div>
+                      ))}
+                    </div>
+                    <form onSubmit={handleSendAdminReply} className="flex gap-2">
+                      <input
+                        value={adminReplyInput}
+                        onChange={(e) => setAdminReplyInput(e.target.value)}
+                        placeholder="Type a reply..."
+                        className="flex-1 bg-white border border-[#ccc3d7] rounded-xl px-3 py-2 text-xs"
+                      />
+                      <button type="submit" className="px-4 py-2 bg-[#5300b7] text-white rounded-xl text-xs font-bold hover:bg-[#6d28d9]">Send</button>
+                    </form>
+                  </>
+                )}
+              </div>
             </div>
           )}
 

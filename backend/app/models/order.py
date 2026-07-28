@@ -34,6 +34,8 @@ class Order(Base):
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
     )
     total_amount: Mapped[float] = mapped_column(Float, nullable=False)
+    promo_code: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    discount_amount: Mapped[float] = mapped_column(Float, default=0, nullable=False)
     payment_method: Mapped[str] = mapped_column(
         String(50), nullable=False
     )

@@ -66,7 +66,7 @@ async def create_order(
     if not ref and current_user.is_affiliate and current_user.affiliate_id:
         ref = current_user.affiliate_id
 
-    total = sum(i.price_at_add * i.quantity for i in cart.items)
+    subtotal = sum(i.price_at_add * i.quantity for i in cart.items)
 
     # Tag order with seller_id if all items belong to the same seller
     _cart_seller_ids = list({
@@ -75,15 +75,41 @@ async def create_order(
     })
     _order_seller_id = _cart_seller_ids[0] if len(_cart_seller_ids) == 1 else None
 
+    # Re-validate and apply any promo code server-side — never trust a
+    # client-computed discount for the actual charge.
+    discount_amount = 0.0
+    applied_promo = None
+    if payload.promo_code:
+        from app.api.v1.endpoints.promo import _get_active_promo
+        promo = await _get_active_promo(db, payload.promo_code)
+        if promo:
+            expired = promo.expires_at and datetime.now(timezone.utc) > promo.expires_at
+            exhausted = promo.max_uses > 0 and promo.uses >= promo.max_uses
+            under_min = promo.min_spend and subtotal < promo.min_spend
+            if not expired and not exhausted and not under_min:
+                if promo.discount_type == "fixed":
+                    discount_amount = min(promo.discount_percent, subtotal)
+                else:
+                    discount_amount = round(subtotal * (promo.discount_percent / 100), 2)
+                applied_promo = promo
+
+    total = max(0, subtotal - discount_amount)
+
     order = Order(
         user_id=current_user.id,
         total_amount=total,
+        promo_code=applied_promo.code if applied_promo else None,
+        discount_amount=discount_amount,
         payment_method=payload.payment_method,
         contact_info=payload.contact_info,
         seller_id=_order_seller_id,
     )
     db.add(order)
     await db.flush()
+
+    if applied_promo:
+        applied_promo.uses = (applied_promo.uses or 0) + 1
+        await db.flush()
 
     for item in cart.items:
         snapshot = {

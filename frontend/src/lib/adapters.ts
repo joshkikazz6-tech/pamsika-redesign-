@@ -81,7 +81,7 @@ export function adaptOrders(list: any[]): OrderItem[] {
 
 // ── Community ─────────────────────────────────────────────────────────────
 
-function adaptComment(c: any): PostComment {
+function adaptComment(c: any, currentUserId?: string): PostComment {
   return {
     id: String(c.id),
     authorName: c.author || 'User',
@@ -89,10 +89,8 @@ function adaptComment(c: any): PostComment {
     authorBadge: undefined,
     timestamp: c.created_at ? new Date(c.created_at).toLocaleString() : 'Just now',
     text: c.content,
-    // The backend doesn't persist per-comment likes, so this is a
-    // client-side-only affordance (see CHANGES.md — "Known scope limits").
-    likes: 0,
-    isLiked: false,
+    likes: c.likes ?? 0,
+    isLiked: currentUserId ? (c.liked_by_ids || []).includes(currentUserId) : false,
   };
 }
 
@@ -105,15 +103,23 @@ export function adaptPost(p: any, currentUserId?: string): CommunityPost {
     timestamp: p.created_at ? new Date(p.created_at).toLocaleString() : 'Just now',
     content: p.content,
     image: (p.images && p.images[0]) || undefined,
-    categoryTag: undefined,
+    categoryTag: p.category_tag ?? undefined,
     likes: p.likes ?? 0,
     isLiked: currentUserId ? (p.liked_by_ids || []).includes(currentUserId) : false,
     commentsCount: (p.comments || []).length,
-    comments: (p.comments || []).map(adaptComment),
-    // Tagged-product posts and an "admin post" flag aren't in the backend's
-    // post schema yet (see CHANGES.md); left undefined rather than guessed.
+    comments: (p.comments || []).map((c: any) => adaptComment(c, currentUserId)),
     isAdminPost: undefined,
-    taggedProduct: undefined,
+    taggedProduct: p.tagged_product
+      ? {
+          id: String(p.tagged_product.id),
+          name: p.tagged_product.name,
+          category: 'Others',
+          price: p.tagged_product.price,
+          currency: 'MWK',
+          image: (p.tagged_product.images && p.tagged_product.images[0]) || FALLBACK_IMAGE,
+          images: p.tagged_product.images && p.tagged_product.images.length ? p.tagged_product.images : [FALLBACK_IMAGE],
+        } as Product
+      : undefined,
   };
 }
 
@@ -150,6 +156,39 @@ export function adaptConversation(c: any): ChatConversation {
 
 export function adaptConversations(list: any[]): ChatConversation[] {
   return (list || []).map(adaptConversation);
+}
+
+// ── Admin Inbox tab (richer shape than the buyer-facing ChatConversation) ──
+export function adaptAdminInboxItem(c: any): any {
+  const msgs = c.messages || [];
+  const first = msgs[0];
+  const rest = msgs.slice(1);
+  const senderRole = c.participant_type === 'seller' ? 'Seller' : 'Buyer';
+  return {
+    id: String(c.id),
+    senderName: c.user_name || 'User',
+    senderRole,
+    phone: c.user_phone || '',
+    email: c.user_email || '',
+    category: c.subject || 'General Enquiry',
+    subject: c.subject || 'General Enquiry',
+    message: first ? first.content : '',
+    timestamp: c.updated_at ? new Date(c.updated_at).toLocaleString() : '',
+    isRead: (c.unread || 0) === 0,
+    status: c.resolved ? 'Resolved' : (c.unread > 0 ? 'Open' : 'In Progress'),
+    // The backend has no persisted priority field — every real conversation
+    // defaults to Normal rather than a fabricated urgency level.
+    priority: 'Normal',
+    replies: rest.map((m: any) => ({
+      sender: m.is_admin ? 'Admin Support' : (c.user_name || 'User'),
+      text: m.content,
+      time: m.created_at ? new Date(m.created_at).toLocaleString() : '',
+    })),
+  };
+}
+
+export function adaptAdminInbox(list: any[]): any[] {
+  return (list || []).map(adaptAdminInboxItem);
 }
 
 // ── Cart ──────────────────────────────────────────────────────────────────

@@ -208,3 +208,55 @@ via `AuthProvider`).
 | `vite build` (production) | PASS |
 | `python3 -m py_compile` on all backend files | PASS |
 | Not run: end-to-end against a live database | Not verified in this pass |
+
+---
+
+## PASS 3 — Remove Remaining Admin Mock Data, Wire to Real Backend (2026-07-27)
+
+Removed every remaining hardcoded/mock dataset in the admin panel and a few
+adjacent gaps, replacing them with real API calls. Summary:
+
+**Backend**
+- `promo_codes`: added `title`, `discount_type` (percentage/fixed), `min_spend`,
+  `applicable_category`, `description`. Added `PATCH /promo/admin/{id}`.
+  Checkout (`POST /orders`) now re-validates and applies any promo
+  **server-side** and increments `uses` — the client-computed discount is
+  never trusted for the actual charge.
+- `orders`: new `promo_code` / `discount_amount` columns.
+- `community_posts`: new `category_tag` / `tagged_product_id` columns.
+  `comment_likes` table + `POST`/`DELETE .../comments/{id}/like` — comment
+  likes are now persisted (previously client-side only, reset on reload).
+- `conversations`: new `resolved` flag + `PATCH /messages/admin/{id}` to
+  toggle resolved/read status from the admin Inbox tab.
+- New `GET /admin/affiliate-clicks`, backed by the pre-existing
+  `AffiliateClick` table (had no admin-facing route before).
+- Migration `0009_remove_admin_mock_data.py`.
+
+**Frontend**
+- `AdminView.tsx`: the Affiliates tab's four sub-tabs (affiliate list,
+  commission paid, pending withdrawals, click logs), the Withdrawals tab,
+  the Promos tab, the Notify tab, and the Inbox tab were all hardcoded
+  arrays or, in the Withdrawals/Users/Promos/Notify/Inbox cases, static
+  copy that never read any state at all. All eight now derive from real
+  props fed by `App.tsx`, and every action button (approve/reject
+  withdrawal, create/pause/delete promo, send broadcast, reply/resolve a
+  conversation) calls a real handler instead of mutating local mock state.
+- `CartView.tsx`: the promo box was a hardcoded `'PAMSIKA10'` check with a
+  client-side 10%-off calculation. Now calls `GET /promo/validate/{code}`
+  and threads the validated code through to checkout.
+- Comment likes and admin-post category/product tagging, previously
+  documented as client-side-only in Pass 2, are now fully persisted.
+
+**Known, disclosed simplifications** (real data, but the richest mocked
+fields had no backend equivalent to map onto):
+- Affiliate `tier` label is a deterministic function of real sales count,
+  not a stored value.
+- Click log rows are real, but `converted`/`commissionEarned` per click are
+  not computable (no order-to-click attribution in the schema) and are
+  reported as `false`/`0` rather than invented.
+- Admin Inbox conversations have no persisted `priority` field; all show
+  as `Normal` rather than a fabricated urgency level.
+- The admin bell/notification-center feed (system alerts about approvals,
+  withdrawals, etc. — separate from the "Notify broadcast" feature) is
+  still local-only; wiring it would require a dedicated audit-log-backed
+  feed and was out of scope for this pass.

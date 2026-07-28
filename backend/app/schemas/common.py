@@ -56,6 +56,7 @@ class CartOut(BaseModel):
 class OrderCreate(BaseModel):
     payment_method: str
     contact_info: dict
+    promo_code: str | None = None
 
     @field_validator("payment_method")
     @classmethod
@@ -79,6 +80,8 @@ class OrderOut(BaseModel):
 
     id: uuid.UUID
     total_amount: float
+    promo_code: str | None = None
+    discount_amount: float = 0
     payment_method: str
     status: str
     contact_info: dict

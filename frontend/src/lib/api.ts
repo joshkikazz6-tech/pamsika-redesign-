@@ -251,8 +251,10 @@ class ApiClient {
     if (affiliateRef) body.affiliate_ref = affiliateRef;
     return this.post('/orders/direct', body);
   }
-  createOrderFromCart(paymentMethod: string, contactInfo: Record<string, any>) {
-    return this.post('/orders', { payment_method: paymentMethod, contact_info: contactInfo });
+  createOrderFromCart(paymentMethod: string, contactInfo: Record<string, any>, promoCode?: string) {
+    const body: any = { payment_method: paymentMethod, contact_info: contactInfo };
+    if (promoCode) body.promo_code = promoCode;
+    return this.post('/orders', body);
   }
   myOrders() {
     return this.get('/orders');
@@ -339,8 +341,12 @@ class ApiClient {
   getPosts() {
     return this.get('/community/posts');
   }
-  createPost(content: string, images: string[] = []) {
-    return this.post('/community/posts', { content, images });
+  createPost(content: string, images: string[] = [], categoryTag?: string, taggedProductId?: string) {
+    return this.post('/community/posts', {
+      content, images,
+      category_tag: categoryTag,
+      tagged_product_id: taggedProductId,
+    });
   }
   deletePost(id: string) {
     return this.del(`/community/posts/${id}`);
@@ -356,6 +362,12 @@ class ApiClient {
   }
   deleteComment(postId: string, commentId: string) {
     return this.del(`/community/posts/${postId}/comments/${commentId}`);
+  }
+  likeComment(postId: string, commentId: string) {
+    return this.post(`/community/posts/${postId}/comments/${commentId}/like`);
+  }
+  unlikeComment(postId: string, commentId: string) {
+    return this.del(`/community/posts/${postId}/comments/${commentId}/like`);
   }
 
   // ── Messages ──────────────────────────────────────────────────────────────
@@ -390,6 +402,9 @@ class ApiClient {
   adminStartConversation(userId: string, subject: string, message: string, mediaUrls: string[] = []) {
     return this.post('/messages/admin/start', { user_id: userId, subject, message, media_urls: mediaUrls });
   }
+  adminUpdateConversation(id: string, data: { resolved?: boolean; read?: boolean }) {
+    return this.patch(`/messages/admin/${id}`, data);
+  }
 
   // ── Reviews ───────────────────────────────────────────────────────────────
   getReviews(productId: string) {
@@ -403,14 +418,18 @@ class ApiClient {
   }
 
   // ── Promo codes ───────────────────────────────────────────────────────────
-  validatePromo(code: string) {
-    return this.get(`/promo/validate/${encodeURIComponent(code)}`);
+  validatePromo(code: string, subtotal?: number) {
+    const qs = subtotal ? `?subtotal=${subtotal}` : '';
+    return this.get(`/promo/validate/${encodeURIComponent(code)}${qs}`);
   }
   adminCreatePromo(data: Record<string, any>) {
     return this.post('/promo/admin/create', data);
   }
   adminListPromos() {
     return this.get('/promo/admin/list');
+  }
+  adminUpdatePromo(id: string, data: Record<string, any>) {
+    return this.patch(`/promo/admin/${id}`, data);
   }
   adminDeletePromo(id: string) {
     return this.del(`/promo/admin/${id}`);
@@ -430,6 +449,9 @@ class ApiClient {
   }
   adminAffiliates() {
     return this.get('/admin/affiliates');
+  }
+  adminAffiliateClicks() {
+    return this.get('/admin/affiliate-clicks');
   }
   adminSetGlobalCommission(percent: number) {
     return this.post('/admin/affiliates/set-global-commission', { commission_percent: percent });

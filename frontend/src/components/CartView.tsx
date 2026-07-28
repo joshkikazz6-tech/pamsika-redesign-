@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CartItem, Product } from '../types';
 import { OrderMethodsModal } from './OrderMethodsModal';
+import { Api, ApiError } from '../lib/api';
 
 interface CartViewProps {
   cartItems: CartItem[];
@@ -12,7 +13,8 @@ interface CartViewProps {
   onConfirmCartOrder?: (
     product: Product | null,
     method: 'whatsapp' | 'facebook' | 'email' | 'pamsika',
-    customMsg?: string
+    customMsg?: string,
+    promoCode?: string
   ) => void;
 }
 
@@ -26,18 +28,29 @@ export const CartView: React.FC<CartViewProps> = ({
   onConfirmCartOrder,
 }) => {
   const [promoCode, setPromoCode] = useState('');
+  const [appliedCode, setAppliedCode] = useState('');
   const [discount, setDiscount] = useState(0);
+  const [isApplyingPromo, setIsApplyingPromo] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
   const subtotal = cartItems.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
   const total = Math.max(0, subtotal - discount);
 
-  const handleApplyPromo = () => {
-    if (promoCode.trim().toUpperCase() === 'PAMSIKA10') {
-      setDiscount(subtotal * 0.1);
-      onShowToast('Promo code applied! 10% discount off total.');
-    } else if (promoCode.trim().length > 0) {
-      onShowToast('Try code "PAMSIKA10" for 10% off!');
+  const handleApplyPromo = async () => {
+    const code = promoCode.trim();
+    if (!code) return;
+    setIsApplyingPromo(true);
+    try {
+      const res = await Api.validatePromo(code, subtotal);
+      setDiscount(res.discount_amount || 0);
+      setAppliedCode(res.code);
+      onShowToast(`Promo applied! MWK ${(res.discount_amount || 0).toLocaleString()} off.`);
+    } catch (err) {
+      setDiscount(0);
+      setAppliedCode('');
+      onShowToast(err instanceof ApiError ? err.message : 'Invalid or expired promo code');
+    } finally {
+      setIsApplyingPromo(false);
     }
   };
 
@@ -175,9 +188,10 @@ export const CartView: React.FC<CartViewProps> = ({
           />
           <button
             onClick={handleApplyPromo}
-            className="px-5 bg-white border border-[#5300b7]/30 text-[#5300b7] hover:bg-[#5300b7] hover:text-white rounded-xl text-xs font-bold transition-all shadow-sm"
+            disabled={isApplyingPromo}
+            className="px-5 bg-white border border-[#5300b7]/30 text-[#5300b7] hover:bg-[#5300b7] hover:text-white rounded-xl text-xs font-bold transition-all shadow-sm disabled:opacity-50"
           >
-            Apply
+            {isApplyingPromo ? 'Checking...' : 'Apply'}
           </button>
         </div>
       </div>
@@ -209,7 +223,7 @@ export const CartView: React.FC<CartViewProps> = ({
           onClose={() => setIsCheckoutOpen(false)}
           onSelectMethod={(prod, method, customMsg) => {
             if (onConfirmCartOrder) {
-              onConfirmCartOrder(prod, method, customMsg);
+              onConfirmCartOrder(prod, method, customMsg, appliedCode || undefined);
             }
             onClearCart();
             setIsCheckoutOpen(false);

@@ -30,6 +30,7 @@ import {
   sellerStatusToBackend,
   adaptPendingApprovals,
   adaptDoloData,
+  adaptAdminInbox,
 } from './lib/adapters';
 
 import { Product, CartItem, ChatConversation, CommunityPost, PostComment, OrderItem, SellerProfile, PendingProductApproval, DoloAffiliate } from './types';
@@ -102,6 +103,11 @@ export default function App() {
   const [sellers, setSellers] = useState<SellerProfile[]>([]);
   const [pendingApprovals, setPendingApprovals] = useState<PendingProductApproval[]>([]);
   const [adminStats, setAdminStats] = useState<AdminStats | null>(null);
+  const [adminAffiliatesList, setAdminAffiliatesList] = useState<any[]>([]);
+  const [adminWithdrawalsList, setAdminWithdrawalsList] = useState<any[]>([]);
+  const [adminClickLogsList, setAdminClickLogsList] = useState<any[]>([]);
+  const [adminPromosList, setAdminPromosList] = useState<any[]>([]);
+  const [adminInboxList, setAdminInboxList] = useState<any[]>([]);
 
   // Order Methods & Detail Modal State
   const [orderModalProduct, setOrderModalProduct] = useState<Product | null>(null);
@@ -196,20 +202,129 @@ export default function App() {
   const loadAdminData = useCallback(async () => {
     if (!user?.is_admin) return;
     try {
-      const [stats, ords, sellerList, pending] = await Promise.all([
+      const [stats, ords, sellerList, pending, affiliates, withdrawals, clicks, promos, inbox] = await Promise.all([
         Api.adminStats(),
         Api.adminOrders({ per_page: 100 }),
         Api.adminSellers(),
         Api.adminSellerProducts('pending'),
+        Api.adminAffiliates(),
+        Api.adminWithdrawals(),
+        Api.adminAffiliateClicks(),
+        Api.adminListPromos(),
+        Api.adminAllConversations(),
       ]);
       setAdminStats(stats);
       setAdminOrdersList(adaptOrders(ords));
       setSellers(adaptSellerProfiles(sellerList));
       setPendingApprovals(adaptPendingApprovals(pending));
+      setAdminAffiliatesList(affiliates);
+      setAdminWithdrawalsList(withdrawals);
+      setAdminClickLogsList(clicks);
+      setAdminPromosList(promos);
+      setAdminInboxList(adaptAdminInbox(inbox));
     } catch (err) {
       console.error('Failed to load admin data', err);
     }
   }, [user]);
+
+  const handleApproveWithdrawal = async (id: string) => {
+    try {
+      await Api.adminApproveWithdrawal(id);
+      await loadAdminData();
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not approve withdrawal');
+    }
+  };
+
+  const handleRejectWithdrawal = async (id: string, note?: string) => {
+    try {
+      await Api.adminRejectWithdrawal(id, note);
+      await loadAdminData();
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not reject withdrawal');
+    }
+  };
+
+  const handleCreatePromo = async (data: Record<string, any>) => {
+    try {
+      await Api.adminCreatePromo(data);
+      await loadAdminData();
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not create promo code');
+    }
+  };
+
+  const handleTogglePromo = async (id: string, isActive: boolean) => {
+    try {
+      await Api.adminUpdatePromo(id, { is_active: isActive });
+      await loadAdminData();
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not update promo code');
+    }
+  };
+
+  const handleUpdatePromo = async (id: string, data: Record<string, any>) => {
+    try {
+      await Api.adminUpdatePromo(id, data);
+      await loadAdminData();
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not update promo code');
+    }
+  };
+
+  const handleDeletePromo = async (id: string) => {
+    try {
+      await Api.adminDeletePromo(id);
+      await loadAdminData();
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not delete promo code');
+    }
+  };
+
+  const handleSendBroadcast = async (title: string, body: string) => {
+    try {
+      await Api.broadcastNotification(title, body);
+      showToast('Broadcast notification sent to all active users!');
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not send broadcast');
+    }
+  };
+
+  const handleReplyInbox = async (conversationId: string, text: string) => {
+    try {
+      await Api.replyMessage(conversationId, text);
+      await loadAdminData();
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not send reply');
+    }
+  };
+
+  const handleResolveInbox = async (conversationId: string, resolved: boolean) => {
+    try {
+      await Api.adminUpdateConversation(conversationId, { resolved });
+      await loadAdminData();
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not update conversation');
+    }
+  };
+
+  const handleSetInboxRead = async (conversationId: string, read: boolean) => {
+    try {
+      await Api.adminUpdateConversation(conversationId, { read });
+      await loadAdminData();
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not update conversation');
+    }
+  };
+
+  const handleDeleteInbox = async (conversationId: string) => {
+    try {
+      await Api.deleteConversation(conversationId);
+      await loadAdminData();
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not delete conversation');
+    }
+  };
 
   // Public data — loads once
   useEffect(() => {
@@ -394,7 +509,8 @@ export default function App() {
   const handleConfirmOrderMethod = async (
     product: Product | null,
     method: 'whatsapp' | 'facebook' | 'email' | 'pamsika',
-    customMsg?: string
+    customMsg?: string,
+    promoCode?: string
   ) => {
     try {
       if (product) {
@@ -415,7 +531,7 @@ export default function App() {
         if (!ok) return;
         await Api.createOrderFromCart(CHECKOUT_METHOD_MAP[method] || 'whatsapp', {
           name: user?.full_name || 'Customer',
-        });
+        }, promoCode);
         setCart([]);
         loadSellerData();
         if (customMsg) {
@@ -480,22 +596,19 @@ export default function App() {
     }
   };
 
-  // The backend doesn't persist per-comment likes (see CHANGES.md), so this
-  // is a client-side-only affordance that resets on reload.
-  const handleToggleLikeComment = (postId: string, commentId: string) => {
-    setPosts((prev) =>
-      prev.map((p) => {
-        if (p.id === postId && p.comments) {
-          const updatedComments = p.comments.map((c) =>
-            c.id === commentId
-              ? { ...c, isLiked: !c.isLiked, likes: c.isLiked ? Math.max(0, (c.likes || 1) - 1) : (c.likes || 0) + 1 }
-              : c
-          );
-          return { ...p, comments: updatedComments };
-        }
-        return p;
-      })
-    );
+  const handleToggleLikeComment = async (postId: string, commentId: string) => {
+    const post = posts.find((p) => p.id === postId);
+    const comment = post?.comments?.find((c) => c.id === commentId);
+    try {
+      if (comment?.isLiked) {
+        await Api.unlikeComment(postId, commentId);
+      } else {
+        await Api.likeComment(postId, commentId);
+      }
+      await loadPosts();
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Could not update like');
+    }
   };
 
   const handleDeleteComment = async (postId: string, commentId: string) => {
@@ -518,10 +631,6 @@ export default function App() {
     }
   };
 
-  // Admin broadcast posts: content + image persist to the backend like any
-  // post. categoryTag/taggedProduct aren't in the backend's post schema
-  // (see CHANGES.md), so they're attached client-side to the just-created
-  // post for this session only rather than guessed at / faked as persisted.
   const handleCreateAdminPost = async (
     content: string,
     categoryTag?: string,
@@ -531,13 +640,8 @@ export default function App() {
     const ok = await requireAuth();
     if (!ok) return;
     try {
-      await Api.createPost(content, image ? [image] : []);
-      const res = await Api.getPosts();
-      const adapted = adaptPosts(res, user?.id);
-      if (adapted.length > 0) {
-        adapted[0] = { ...adapted[0], isAdminPost: true, categoryTag, taggedProduct };
-      }
-      setPosts(adapted);
+      await Api.createPost(content, image ? [image] : [], categoryTag, taggedProduct?.id);
+      await loadPosts();
       showToast('Official Admin Broadcast published to Feed!');
     } catch (err) {
       showToast(err instanceof ApiError ? err.message : 'Could not publish broadcast');
@@ -907,6 +1011,23 @@ export default function App() {
             onDeleteProduct={handleAdminDeleteProduct}
             onShowToast={showToast}
             onNavigate={handleNavigate}
+            affiliates={adminAffiliatesList}
+            withdrawals={adminWithdrawalsList}
+            clickLogs={adminClickLogsList}
+            promos={adminPromosList}
+            inbox={adminInboxList}
+            totalUsers={adminStats?.total_users || 0}
+            onApproveWithdrawal={handleApproveWithdrawal}
+            onRejectWithdrawal={handleRejectWithdrawal}
+            onCreatePromo={handleCreatePromo}
+            onUpdatePromo={handleUpdatePromo}
+            onTogglePromo={handleTogglePromo}
+            onDeletePromo={handleDeletePromo}
+            onSendBroadcast={handleSendBroadcast}
+            onReplyInbox={handleReplyInbox}
+            onResolveInbox={handleResolveInbox}
+            onSetInboxRead={handleSetInboxRead}
+            onDeleteInbox={handleDeleteInbox}
           />
         )}
 
