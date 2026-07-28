@@ -14,8 +14,24 @@
     color: #ffffff !important;
   }
 
+  html, body {
+    max-width: 100vw;
+    overflow-x: hidden;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
   .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
   .pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+
+  p, span, h1, h2, h3, h4, h5, h6, div, td, th, a, button {
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+
+  img, video, svg, iframe {
+    max-width: 100%;
+  }
 }
 
 /* Pure Black & White Dark Mode Utility Overrides */

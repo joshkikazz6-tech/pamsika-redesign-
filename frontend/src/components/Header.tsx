@@ -11,6 +11,8 @@ interface HeaderProps {
   unreadMessagesCount?: number;
   isDarkMode?: boolean;
   onToggleDarkMode?: () => void;
+  userName?: string;
+  userRole?: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -24,6 +26,8 @@ export const Header: React.FC<HeaderProps> = ({
   unreadMessagesCount = 0,
   isDarkMode = false,
   onToggleDarkMode,
+  userName,
+  userRole = 'Member',
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const cities = ['Lilongwe', 'Blantyre', 'Mzuzu', 'Zomba'];
@@ -316,11 +320,16 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Drawer Footer User Profile */}
             <div className="pt-4 border-t border-slate-200 dark:border-zinc-800 flex items-center gap-3">
               <div className="w-9 h-9 rounded-full bg-slate-900 text-white dark:bg-white dark:text-black flex items-center justify-center font-bold text-xs shadow-sm">
-                JD
+                {(userName || 'Guest')
+                  .split(' ')
+                  .filter(Boolean)
+                  .slice(0, 2)
+                  .map((n) => n[0]?.toUpperCase())
+                  .join('') || 'G'}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-slate-900 dark:text-white truncate">John Doe</p>
-                <p className="text-[10px] text-slate-500 dark:text-zinc-400">Super Admin • Verified</p>
+                <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{userName || 'Guest'}</p>
+                <p className="text-[10px] text-slate-500 dark:text-zinc-400">{userRole}</p>
               </div>
             </div>
           </aside>

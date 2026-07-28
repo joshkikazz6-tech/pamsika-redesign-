@@ -23,7 +23,7 @@ interface CommunityViewProps {
 export const CommunityView: React.FC<CommunityViewProps> = ({
   posts,
   products = [],
-  registeredUserName = 'John Doe',
+  registeredUserName = 'Guest',
   onToggleLike,
   onAddComment,
   onToggleLikeComment,

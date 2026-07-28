@@ -175,37 +175,57 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       </section>
 
-      {/* Theme Picker */}
+      {/* Theme & Display Settings */}
       <section>
         <h3 className="text-xs font-bold text-[#6D28D9] uppercase tracking-[0.2em] mb-2 px-1">
-          Appearance
+          Theme &amp; Display
         </h3>
-        <div className="flex gap-3 overflow-x-auto pb-1">
-          <button
-            onClick={() => {
-              if (isDarkMode && onToggleDarkMode) onToggleDarkMode();
-              onShowToast('Purple Elite theme active');
-            }}
-            className={`p-3 rounded-2xl border flex-1 text-center transition-all ${
-              !isDarkMode ? 'border-[#6D28D9] bg-[#EDE9FE]' : 'border-[#E5E7EB] bg-white'
-            }`}
-          >
-            <div className="w-full h-8 bg-[#6D28D9] rounded-lg mb-2"></div>
-            <span className="text-xs font-bold text-[#111827]">Purple Elite</span>
-          </button>
+        <div className="bg-[#F9FAFB] dark:bg-[#0a0a0a] rounded-2xl p-4 border border-[#E5E7EB] dark:border-zinc-800 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-black dark:bg-white text-white dark:text-black flex items-center justify-center font-bold shrink-0">
+                <span className="material-symbols-outlined text-[20px]">
+                  {isDarkMode ? 'dark_mode' : 'light_mode'}
+                </span>
+              </div>
+              <div>
+                <p className="font-bold text-sm text-[#111827] dark:text-white">
+                  {isDarkMode ? 'Pure Black & White Theme' : 'Light Mode Theme'}
+                </p>
+                <p className="text-[11px] text-[#4B5563] dark:text-zinc-400">
+                  {isDarkMode
+                    ? 'High contrast pure black canvas with clean monochrome accents'
+                    : 'Standard bright layout with crisp purple highlights'}
+                </p>
+              </div>
+            </div>
 
-          <button
-            onClick={() => {
-              if (!isDarkMode && onToggleDarkMode) onToggleDarkMode();
-              onShowToast('Pure Black theme active');
-            }}
-            className={`p-3 rounded-2xl border flex-1 text-center transition-all ${
-              isDarkMode ? 'border-[#6D28D9] bg-slate-900 text-white' : 'border-[#E5E7EB] bg-white'
-            }`}
-          >
-            <div className="w-full h-8 bg-black border border-[#333] rounded-lg mb-2"></div>
-            <span className="text-xs font-bold">Pure Black</span>
-          </button>
+            {onToggleDarkMode && (
+              <button
+                onClick={() => {
+                  onToggleDarkMode();
+                  onShowToast(
+                    !isDarkMode
+                      ? 'Switched to Pure Black & White Dark Mode!'
+                      : 'Switched to Standard Light Mode!'
+                  );
+                }}
+                className={`w-14 h-8 rounded-full p-1 transition-colors cursor-pointer flex items-center ${
+                  isDarkMode ? 'bg-white' : 'bg-slate-300'
+                }`}
+              >
+                <div
+                  className={`w-6 h-6 rounded-full shadow-md transition-transform flex items-center justify-center ${
+                    isDarkMode ? 'translate-x-6 bg-black text-white' : 'translate-x-0 bg-white text-slate-800'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[14px]">
+                    {isDarkMode ? 'dark_mode' : 'light_mode'}
+                  </span>
+                </div>
+              </button>
+            )}
+          </div>
         </div>
       </section>
 

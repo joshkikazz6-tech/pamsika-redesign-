@@ -875,6 +875,8 @@ export default function App() {
           unreadMessagesCount={unreadMessagesCount}
           isDarkMode={isDarkMode}
           onToggleDarkMode={handleToggleDarkMode}
+          userName={user?.full_name}
+          userRole={user?.is_admin ? 'Admin' : user?.is_seller ? 'Seller' : user?.is_affiliate ? 'Affiliate' : 'Member'}
         />
       )}
 
@@ -992,6 +994,7 @@ export default function App() {
             onApply={handleSellerApply}
             onWithdraw={handleSellerWithdraw}
             onShowToast={showToast}
+            defaultApplicantName={user?.full_name || ''}
           />
         )}
 

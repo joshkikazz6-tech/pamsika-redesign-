@@ -18,6 +18,7 @@ interface SellerHubViewProps {
     productsSummary: string;
   }) => Promise<void> | void;
   onWithdraw?: (amount: number, method: string, details: Record<string, any>) => Promise<void> | void;
+  defaultApplicantName?: string;
 }
 
 export const SellerHubView: React.FC<SellerHubViewProps> = ({
@@ -29,6 +30,7 @@ export const SellerHubView: React.FC<SellerHubViewProps> = ({
   balance,
   onApply,
   onWithdraw,
+  defaultApplicantName = '',
 }) => {
   const usesRealAuth = sellerStatus !== undefined;
 
@@ -58,12 +60,12 @@ export const SellerHubView: React.FC<SellerHubViewProps> = ({
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
 
   // Seller application form state
-  const [applicantName, setApplicantName] = useState('John Doe');
-  const [nationalId, setNationalId] = useState('9921-LL-4421');
-  const [phone, setPhone] = useState('990 123 456');
+  const [applicantName, setApplicantName] = useState(defaultApplicantName);
+  const [nationalId, setNationalId] = useState('');
+  const [phone, setPhone] = useState('');
   const [location, setLocation] = useState('Lilongwe');
-  const [storeName, setStoreName] = useState("John's Artisanal Crafts");
-  const [productsSummary, setProductsSummary] = useState('Hand-carved wooden crafts, leather goods, traditional baskets.');
+  const [storeName, setStoreName] = useState('');
+  const [productsSummary, setProductsSummary] = useState('');
 
   // Handle image files selection (Maximum 5 images)
   const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -194,6 +196,7 @@ export const SellerHubView: React.FC<SellerHubViewProps> = ({
                   type="text"
                   value={applicantName}
                   onChange={(e) => setApplicantName(e.target.value)}
+                  placeholder="e.g. Chikondi Banda"
                   required
                   className="w-full bg-[#eff4ff] border border-[#ccc3d7]/50 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#5300b7]/30"
                 />
@@ -204,6 +207,7 @@ export const SellerHubView: React.FC<SellerHubViewProps> = ({
                   type="text"
                   value={nationalId}
                   onChange={(e) => setNationalId(e.target.value)}
+                  placeholder="e.g. 9921-LL-4421"
                   required
                   className="w-full bg-[#eff4ff] border border-[#ccc3d7]/50 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#5300b7]/30"
                 />
@@ -217,6 +221,7 @@ export const SellerHubView: React.FC<SellerHubViewProps> = ({
                   type="text"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
+                  placeholder="e.g. 990 123 456"
                   required
                   className="w-full bg-[#eff4ff] border border-[#ccc3d7]/50 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#5300b7]/30"
                 />
@@ -242,6 +247,7 @@ export const SellerHubView: React.FC<SellerHubViewProps> = ({
                 type="text"
                 value={storeName}
                 onChange={(e) => setStoreName(e.target.value)}
+                placeholder="e.g. Chikondi's Artisanal Crafts"
                 required
                 className="w-full bg-[#eff4ff] border border-[#ccc3d7]/50 rounded-xl px-4 py-2.5 text-sm font-bold text-[#5300b7] focus:outline-none focus:ring-2 focus:ring-[#5300b7]/30"
               />
@@ -252,6 +258,7 @@ export const SellerHubView: React.FC<SellerHubViewProps> = ({
               <textarea
                 value={productsSummary}
                 onChange={(e) => setProductsSummary(e.target.value)}
+                placeholder="e.g. Hand-carved wooden crafts, leather goods, traditional baskets."
                 rows={3}
                 required
                 className="w-full bg-[#eff4ff] border border-[#ccc3d7]/50 rounded-xl px-4 py-2.5 text-xs text-[#121c2a] focus:outline-none resize-none focus:ring-2 focus:ring-[#5300b7]/30"

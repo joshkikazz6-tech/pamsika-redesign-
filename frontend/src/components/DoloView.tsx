@@ -23,16 +23,16 @@ export const DoloView: React.FC<DoloViewProps> = ({ doloData, onShowToast, isAff
   const memberState = usesRealAuth ? !!isAffiliate : isDoloMember;
 
   const [authMode, setAuthMode] = useState<'join' | 'signin'>('join');
-  const [fullName, setFullName] = useState(doloData.name || 'John Doe');
-  const [contactInfo, setContactInfo] = useState(doloData.email || 'john@example.com');
+  const [fullName, setFullName] = useState(doloData.name || '');
+  const [contactInfo, setContactInfo] = useState(doloData.email || '');
   const [payoutOption, setPayoutOption] = useState('Airtel Money (+265 990...)');
 
   // Withdrawal modal state
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
-  const [withdrawAmount, setWithdrawAmount] = useState('15000');
+  const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawMethod, setWithdrawMethod] = useState('Airtel Money');
-  const [accountNumber, setAccountNumber] = useState('+265 990 123 456');
-  const [accountName, setAccountName] = useState('John Doe');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [accountName, setAccountName] = useState(doloData.name || '');
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard?.writeText(text);

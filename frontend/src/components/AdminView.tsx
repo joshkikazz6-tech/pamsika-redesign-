@@ -333,6 +333,11 @@ export const AdminView: React.FC<AdminViewProps> = ({
     notes: w.admin_note || '',
   })), [realWithdrawals]);
 
+  // ==================== WITHDRAWALS STATE ====================
+  const [withdrawalsSearch, setWithdrawalsSearch] = useState('');
+  const [withdrawalsTypeFilter, setWithdrawalsTypeFilter] = useState<'ALL' | 'Seller' | 'Affiliate'>('ALL');
+  const [withdrawalsStatusFilter, setWithdrawalsStatusFilter] = useState<'ALL' | 'Pending Approval' | 'Disbursed' | 'Rejected'>('ALL');
+
   // ==================== PROMOTIONS & VOUCHERS STATE ====================
   const [promosSearch, setPromosSearch] = useState('');
   const [promosStatusFilter, setPromosStatusFilter] = useState<'ALL' | 'Active' | 'Paused' | 'Expired'>('ALL');
@@ -3285,72 +3290,255 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
           {/* ==================== WITHDRAWALS TAB ==================== */}
           {activeNav === 'withdrawals' && (() => {
-            const pending = withdrawalsMainList.filter((w: any) => w.status === 'Pending Approval');
-            const pendingTotal = pending.reduce((s: number, w: any) => s + (w.requestedAmount || 0), 0);
-            return (
-              <div className="bg-white rounded-3xl p-6 border border-[#ccc3d7]/40 shadow-xs space-y-4">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className="font-serif-source text-2xl font-bold text-[#1d1a24]">Seller &amp; Affiliate Withdrawals</h3>
-                    <p className="text-xs text-[#4a4455]">Review and disburse payout requests via Mobile Money or Bank Transfer.</p>
-                  </div>
-                  <span className="px-3 py-1 bg-rose-100 text-rose-700 font-extrabold text-xs rounded-full">
-                    {pending.length} PENDING REQUESTS
-                  </span>
-                </div>
+            const filteredWithdrawalsMain = withdrawalsMainList.filter((w: any) => {
+              const matchesSearch =
+                w.requesterName.toLowerCase().includes(withdrawalsSearch.toLowerCase()) ||
+                w.phone.includes(withdrawalsSearch) ||
+                w.accountNumber.toLowerCase().includes(withdrawalsSearch.toLowerCase()) ||
+                w.id.toLowerCase().includes(withdrawalsSearch.toLowerCase());
+              const matchesType = withdrawalsTypeFilter === 'ALL' || w.type === withdrawalsTypeFilter;
+              const matchesStatus = withdrawalsStatusFilter === 'ALL' || w.status === withdrawalsStatusFilter;
+              return matchesSearch && matchesType && matchesStatus;
+            });
 
-                {pending.length > 0 && (
-                  <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200 space-y-1">
-                    <p className="font-bold text-xs text-amber-900">Pending Payout Volume</p>
-                    <p className="text-xs text-amber-800">
-                      Total awaiting approval: <span className="font-bold">MWK {pendingTotal.toLocaleString()}</span> across {pending.length} request{pending.length !== 1 ? 's' : ''}.
+            const pendingCount = withdrawalsMainList.filter((w: any) => w.status === 'Pending Approval').length;
+            const pendingAmountSum = withdrawalsMainList
+              .filter((w: any) => w.status === 'Pending Approval')
+              .reduce((acc: number, curr: any) => acc + curr.requestedAmount, 0);
+            const totalDisbursedSum = withdrawalsMainList
+              .filter((w: any) => w.status === 'Disbursed')
+              .reduce((acc: number, curr: any) => acc + curr.requestedAmount, 0);
+
+            return (
+              <div className="space-y-6">
+                {/* Header Banner */}
+                <div className="bg-gradient-to-r from-[#1d1a24] via-[#332a41] to-[#1d1a24] text-white rounded-3xl p-6 sm:p-8 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                  <div>
+                    <div className="flex items-center gap-2 text-purple-300 text-xs font-bold uppercase tracking-wider mb-2">
+                      <span className="material-symbols-outlined text-[18px]">account_balance_wallet</span>
+                      Individual Settlement &amp; Payout Audit Panel
+                    </div>
+                    <h2 className="font-serif-source text-2xl sm:text-3xl font-bold tracking-tight">
+                      Seller &amp; Affiliate Withdrawal Requests
+                    </h2>
+                    <p className="text-xs sm:text-sm text-purple-200 max-w-2xl mt-1">
+                      Review each payout request individually. Every transaction must be inspected and verified before manual or gateway release to ensure account accuracy.
                     </p>
                   </div>
-                )}
+                  <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 flex items-center gap-4 shrink-0">
+                    <div>
+                      <span className="text-[10px] font-bold text-amber-300 uppercase block tracking-wider">PENDING APPROVAL</span>
+                      <span className="font-serif-source text-2xl font-bold text-white">MWK {pendingAmountSum.toLocaleString()}</span>
+                      <span className="text-[11px] text-amber-200 block">{pendingCount} requests waiting individual verification</span>
+                    </div>
+                  </div>
+                </div>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="text-left text-[#7b7486] border-b border-[#ccc3d7]/40">
-                        <th className="py-2 pr-3">Requester</th>
-                        <th className="py-2 pr-3">Type</th>
-                        <th className="py-2 pr-3">Method</th>
-                        <th className="py-2 pr-3">Amount</th>
-                        <th className="py-2 pr-3">Status</th>
-                        <th className="py-2 pr-3">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {withdrawalsMainList.length === 0 && (
-                        <tr><td colSpan={6} className="py-6 text-center text-[#7b7486]">No withdrawal requests yet.</td></tr>
-                      )}
-                      {withdrawalsMainList.map((w: any) => (
-                        <tr key={w.id} className="border-b border-[#ccc3d7]/20">
-                          <td className="py-2 pr-3 font-semibold text-[#1d1a24]">{w.requesterName}</td>
-                          <td className="py-2 pr-3">{w.type}</td>
-                          <td className="py-2 pr-3">{w.payoutMethod} · {w.accountNumber}</td>
-                          <td className="py-2 pr-3 font-bold">MWK {(w.requestedAmount || 0).toLocaleString()}</td>
-                          <td className="py-2 pr-3">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              w.status === 'Disbursed' ? 'bg-emerald-100 text-emerald-700' :
-                              w.status === 'Rejected' ? 'bg-rose-100 text-rose-700' :
-                              'bg-amber-100 text-amber-700'
-                            }`}>{w.status}</span>
-                          </td>
-                          <td className="py-2 pr-3">
-                            {w.status === 'Pending Approval' ? (
-                              <div className="flex gap-1.5">
-                                <button onClick={() => handleApproveMainWithdrawal(w.id)} className="px-2.5 py-1 bg-[#5300b7] text-white rounded-lg text-[10px] font-bold hover:bg-[#6d28d9]">Approve</button>
-                                <button onClick={() => handleRejectMainWithdrawal(w.id)} className="px-2.5 py-1 bg-white border border-rose-300 text-rose-600 rounded-lg text-[10px] font-bold hover:bg-rose-50">Reject</button>
-                              </div>
-                            ) : (
-                              <span className="text-[#7b7486]">—</span>
-                            )}
-                          </td>
+                {/* Individual Processing Policy Alert */}
+                <div className="bg-amber-50 rounded-2xl p-4 border border-amber-200 flex items-start gap-3">
+                  <span className="material-symbols-outlined text-amber-700 text-[22px] shrink-0 mt-0.5">security_update_good</span>
+                  <div className="text-xs text-amber-900 space-y-0.5">
+                    <p className="font-bold">Strict Individual Disbursement Policy Active</p>
+                    <p className="text-amber-800">
+                      To prevent fraud and maintain proper accounting, payouts are processed <strong>one by one</strong>. Please verify the seller or affiliate phone number, account balance, and payment channel before approving each single request.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Filter and Search Bar */}
+                <div className="bg-white rounded-3xl p-5 border border-[#ccc3d7]/40 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+                  {/* Search Bar */}
+                  <div className="relative flex-1">
+                    <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#7b7486] text-[20px]">
+                      search
+                    </span>
+                    <input
+                      type="text"
+                      value={withdrawalsSearch}
+                      onChange={(e) => setWithdrawalsSearch(e.target.value)}
+                      placeholder="Search requester name, phone, account number, or request ID..."
+                      className="w-full bg-[#fef7ff] border border-[#ccc3d7] rounded-2xl pl-11 pr-4 py-2.5 text-xs font-bold text-[#1d1a24] focus:outline-none focus:ring-2 focus:ring-[#5300b7]/30"
+                    />
+                  </div>
+
+                  {/* Filters */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select
+                      value={withdrawalsTypeFilter}
+                      onChange={(e) => setWithdrawalsTypeFilter(e.target.value as any)}
+                      className="bg-[#fef7ff] border border-[#ccc3d7] rounded-2xl px-3.5 py-2.5 text-xs font-bold text-[#1d1a24] focus:outline-none cursor-pointer"
+                    >
+                      <option value="ALL">All Requesters</option>
+                      <option value="Seller">Sellers Only</option>
+                      <option value="Affiliate">Affiliates Only</option>
+                    </select>
+
+                    <select
+                      value={withdrawalsStatusFilter}
+                      onChange={(e) => setWithdrawalsStatusFilter(e.target.value as any)}
+                      className="bg-[#fef7ff] border border-[#ccc3d7] rounded-2xl px-3.5 py-2.5 text-xs font-bold text-[#1d1a24] focus:outline-none cursor-pointer"
+                    >
+                      <option value="ALL">All Statuses</option>
+                      <option value="Pending Approval">Pending Approval</option>
+                      <option value="Disbursed">Disbursed</option>
+                      <option value="Rejected">Rejected</option>
+                    </select>
+
+                    <button
+                      onClick={() => {
+                        const headers = [
+                          'Request ID',
+                          'Type',
+                          'Requester Name',
+                          'Phone',
+                          'Payout Method',
+                          'Account Number',
+                          'Available Balance (MWK)',
+                          'Requested Amount (MWK)',
+                          'Request Date',
+                          'Status',
+                          'Audit Notes'
+                        ];
+                        const rows = filteredWithdrawalsMain.map((w: any) => [
+                          w.id,
+                          w.type,
+                          w.requesterName,
+                          w.phone,
+                          w.payoutMethod,
+                          w.accountNumber,
+                          w.availableBalance,
+                          w.requestedAmount,
+                          w.requestDate,
+                          w.status,
+                          w.notes
+                        ]);
+                        handleExportToExcel('Main_Withdrawals_Report', headers, rows);
+                      }}
+                      className="bg-[#107c41] hover:bg-[#0b5c30] text-white px-4 py-2.5 rounded-2xl text-xs font-bold shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2 shrink-0 uppercase tracking-wider"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">download</span>
+                      <span>Excel Report</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Withdrawals Table */}
+                <div className="bg-white rounded-3xl border border-[#ccc3d7]/40 shadow-xs overflow-hidden">
+                  <div className="p-5 bg-[#fef7ff] border-b border-[#ccc3d7]/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                    <div>
+                      <h3 className="font-serif-source font-bold text-lg text-[#1d1a24]">
+                        Withdrawals Queue ({filteredWithdrawalsMain.length})
+                      </h3>
+                      <p className="text-xs text-[#7b7486]">
+                        Showing filtered payout requests for Mobile Money and Bank Transfers
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="text-xs text-amber-800 font-bold bg-amber-100 px-3 py-1 rounded-full">
+                        Pending: MWK {pendingAmountSum.toLocaleString()}
+                      </span>
+                      <span className="text-xs text-emerald-800 font-bold bg-emerald-100 px-3 py-1 rounded-full">
+                        Disbursed: MWK {totalDisbursedSum.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-[#fef7ff] border-b border-[#ccc3d7]/30 text-[10px] font-bold text-[#7b7486] uppercase tracking-wider">
+                          <th className="p-4">Ref / Date</th>
+                          <th className="p-4">Requester &amp; Type</th>
+                          <th className="p-4">Payout Account details</th>
+                          <th className="p-4 text-right">Available Balance</th>
+                          <th className="p-4 text-right">Requested Payout</th>
+                          <th className="p-4 text-center">Status</th>
+                          <th className="p-4 text-right">Individual Action</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-[#ccc3d7]/20">
+                        {filteredWithdrawalsMain.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="p-8 text-center text-[#7b7486]">
+                              No withdrawal requests match your search parameters.
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredWithdrawalsMain.map((wth: any) => (
+                            <tr key={wth.id} className="hover:bg-[#fef7ff]/60 transition-colors">
+                              <td className="p-4">
+                                <div className="font-mono font-bold text-[#5300b7]">{wth.id}</div>
+                                <div className="text-[10px] text-[#7b7486]">{wth.requestDate}</div>
+                              </td>
+                              <td className="p-4">
+                                <div className="font-bold text-[#1d1a24] text-xs">{wth.requesterName}</div>
+                                <div className="flex items-center gap-1.5 mt-0.5">
+                                  <span
+                                    className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                                      wth.type === 'Seller'
+                                        ? 'bg-blue-100 text-blue-800'
+                                        : 'bg-purple-100 text-purple-800'
+                                    }`}
+                                  >
+                                    {wth.type}
+                                  </span>
+                                  <span className="text-[10px] text-[#7b7486]">{wth.phone}</span>
+                                </div>
+                              </td>
+                              <td className="p-4">
+                                <div className="font-bold text-[#1d1a24]">{wth.payoutMethod}</div>
+                                <div className="text-[10px] font-mono text-[#5300b7] font-semibold">
+                                  {wth.accountNumber}
+                                </div>
+                              </td>
+                              <td className="p-4 text-right font-serif-source font-bold text-[#5300b7]">
+                                MWK {wth.availableBalance.toLocaleString()}
+                              </td>
+                              <td className="p-4 text-right font-serif-source font-extrabold text-emerald-700 text-sm">
+                                MWK {wth.requestedAmount.toLocaleString()}
+                              </td>
+                              <td className="p-4 text-center">
+                                <span
+                                  className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase ${
+                                    wth.status === 'Disbursed'
+                                      ? 'bg-emerald-100 text-emerald-800'
+                                      : wth.status === 'Rejected'
+                                      ? 'bg-rose-100 text-rose-800'
+                                      : 'bg-amber-100 text-amber-800 animate-pulse'
+                                  }`}
+                                >
+                                  {wth.status}
+                                </span>
+                              </td>
+                              <td className="p-4 text-right">
+                                {wth.status === 'Pending Approval' ? (
+                                  <div className="flex items-center justify-end gap-1.5">
+                                    <button
+                                      onClick={() => handleApproveMainWithdrawal(wth.id)}
+                                      className="px-3 py-1.5 bg-[#5300b7] hover:bg-[#6d28d9] text-white font-bold text-[10px] rounded-xl transition-all shadow-xs cursor-pointer flex items-center gap-1 uppercase tracking-wider"
+                                    >
+                                      <span className="material-symbols-outlined text-[14px]">payments</span>
+                                      Disburse
+                                    </button>
+                                    <button
+                                      onClick={() => handleRejectMainWithdrawal(wth.id)}
+                                      className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-[10px] rounded-xl transition-all cursor-pointer border border-rose-200 uppercase"
+                                    >
+                                      Reject
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="text-[10px] text-[#7b7486] font-medium text-right max-w-[150px] truncate">
+                                    {wth.notes}
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             );
@@ -3381,96 +3569,493 @@ export const AdminView: React.FC<AdminViewProps> = ({
           )}
 
           {/* ==================== PROMOS TAB ==================== */}
-          {activeNav === 'promos' && (
-            <div className="bg-white rounded-3xl p-6 border border-[#ccc3d7]/40 shadow-xs space-y-4">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="font-serif-source text-2xl font-bold text-[#1d1a24]">Promotional Campaigns &amp; Vouchers</h3>
-                  <p className="text-xs text-[#4a4455]">Manage discount voucher codes redeemable at checkout.</p>
-                </div>
-                <button
-                  onClick={() => { setEditingPromo(null); setPromoFormData({ code: '', title: '', type: 'percentage', discountValue: '', minSpend: '', maxUsage: '', startDate: '', expiryDate: '', applicableCategory: 'All Products', description: '' }); setIsAddPromoModalOpen(true); }}
-                  className="px-4 py-2 bg-[#5300b7] text-white rounded-xl text-xs font-bold hover:bg-[#6d28d9]"
-                >
-                  + New Promo Code
-                </button>
-              </div>
+          {activeNav === 'promos' && (() => {
+            const filteredPromos = promosList.filter((p: any) => {
+              const matchesSearch =
+                p.code.toLowerCase().includes(promosSearch.toLowerCase()) ||
+                p.title.toLowerCase().includes(promosSearch.toLowerCase()) ||
+                p.applicableCategory.toLowerCase().includes(promosSearch.toLowerCase());
+              const matchesStatus = promosStatusFilter === 'ALL' || p.status === promosStatusFilter;
+              return matchesSearch && matchesStatus;
+            });
 
-              {isAddPromoModalOpen && (
-                <form onSubmit={handleSavePromoForm} className="p-4 bg-[#fef7ff] rounded-2xl border border-[#ccc3d7]/40 grid grid-cols-2 gap-3">
-                  <input required disabled={!!editingPromo} placeholder="CODE (e.g. PAMSIKA10)" value={promoFormData.code} onChange={(e) => setPromoFormData({ ...promoFormData, code: e.target.value })} className="col-span-2 bg-white border border-[#ccc3d7] rounded-xl px-3 py-2 text-xs font-bold disabled:bg-slate-100 disabled:text-slate-500" />
-                  <input required placeholder="Title" value={promoFormData.title} onChange={(e) => setPromoFormData({ ...promoFormData, title: e.target.value })} className="col-span-2 bg-white border border-[#ccc3d7] rounded-xl px-3 py-2 text-xs" />
-                  <select value={promoFormData.type} onChange={(e) => setPromoFormData({ ...promoFormData, type: e.target.value })} className="bg-white border border-[#ccc3d7] rounded-xl px-3 py-2 text-xs">
-                    <option value="percentage">Percentage %</option>
-                    <option value="fixed">Fixed MWK</option>
-                  </select>
-                  <input required type="number" placeholder="Discount value" value={promoFormData.discountValue} onChange={(e) => setPromoFormData({ ...promoFormData, discountValue: e.target.value })} className="bg-white border border-[#ccc3d7] rounded-xl px-3 py-2 text-xs" />
-                  <input type="number" placeholder="Min spend (MWK)" value={promoFormData.minSpend} onChange={(e) => setPromoFormData({ ...promoFormData, minSpend: e.target.value })} className="bg-white border border-[#ccc3d7] rounded-xl px-3 py-2 text-xs" />
-                  <input type="number" placeholder="Max uses" value={promoFormData.maxUsage} onChange={(e) => setPromoFormData({ ...promoFormData, maxUsage: e.target.value })} className="bg-white border border-[#ccc3d7] rounded-xl px-3 py-2 text-xs" />
-                  <input type="date" value={promoFormData.expiryDate} onChange={(e) => setPromoFormData({ ...promoFormData, expiryDate: e.target.value })} className="col-span-2 bg-white border border-[#ccc3d7] rounded-xl px-3 py-2 text-xs" />
-                  <div className="col-span-2 flex gap-2 justify-end">
-                    <button type="button" onClick={() => { setIsAddPromoModalOpen(false); setEditingPromo(null); }} className="px-4 py-2 bg-white border border-[#ccc3d7] rounded-xl text-xs font-bold">Cancel</button>
-                    <button type="submit" className="px-4 py-2 bg-[#5300b7] text-white rounded-xl text-xs font-bold hover:bg-[#6d28d9]">{editingPromo ? 'Save Changes' : 'Save Promo'}</button>
+            const activePromosCount = promosList.filter((p: any) => p.status === 'Active').length;
+            const totalRedemptionsSum = promosList.reduce((acc: number, curr: any) => acc + curr.usedCount, 0);
+
+            return (
+              <div className="space-y-6">
+                {/* Header Banner */}
+                <div className="bg-gradient-to-r from-[#5300b7] via-[#7c22d1] to-[#3b0082] text-white rounded-3xl p-6 sm:p-8 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                  <div>
+                    <div className="flex items-center gap-2 text-purple-200 text-xs font-bold uppercase tracking-wider mb-2">
+                      <span className="material-symbols-outlined text-[18px]">local_offer</span>
+                      Promotions &amp; Voucher Management System
+                    </div>
+                    <h2 className="font-serif-source text-2xl sm:text-3xl font-bold tracking-tight">
+                      Promotional Campaigns &amp; Discount Vouchers
+                    </h2>
+                    <p className="text-xs sm:text-sm text-purple-100 max-w-2xl mt-1">
+                      Create custom discount codes, set percentage or fixed MWK vouchers, configure minimum order thresholds, and monitor redemptions in real time.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setEditingPromo(null);
+                      setPromoFormData({
+                        code: '',
+                        title: '',
+                        type: 'percentage',
+                        discountValue: '10',
+                        minSpend: '10000',
+                        maxUsage: '200',
+                        startDate: new Date().toISOString().slice(0, 10),
+                        expiryDate: '2026-12-31',
+                        applicableCategory: 'All Products',
+                        description: ''
+                      });
+                      setIsAddPromoModalOpen(true);
+                    }}
+                    className="bg-white text-[#5300b7] hover:bg-purple-50 px-5 py-3 rounded-2xl font-bold text-xs shadow-lg transition-all cursor-pointer flex items-center gap-2 shrink-0 uppercase tracking-wider"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">add_circle</span>
+                    <span>Create New Promotion</span>
+                  </button>
+                </div>
+
+                {/* KPI Summary Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-white rounded-2xl p-4 border border-[#ccc3d7]/40 shadow-xs">
+                    <span className="text-[10px] font-bold text-[#7b7486] uppercase block">ACTIVE CAMPAIGNS</span>
+                    <span className="font-serif-source text-2xl font-bold text-[#5300b7] mt-1 block">
+                      {activePromosCount} Active Codes
+                    </span>
+                    <span className="text-[11px] text-[#7b7486] block mt-0.5">Live on marketplace checkout</span>
+                  </div>
+
+                  <div className="bg-white rounded-2xl p-4 border border-[#ccc3d7]/40 shadow-xs">
+                    <span className="text-[10px] font-bold text-[#7b7486] uppercase block">TOTAL VOUCHERS REDEEMED</span>
+                    <span className="font-serif-source text-2xl font-bold text-emerald-700 mt-1 block">
+                      {totalRedemptionsSum} Redemptions
+                    </span>
+                    <span className="text-[11px] text-[#7b7486] block mt-0.5">Across all buyer orders</span>
+                  </div>
+
+                  <div className="bg-white rounded-2xl p-4 border border-[#ccc3d7]/40 shadow-xs">
+                    <span className="text-[10px] font-bold text-[#7b7486] uppercase block">TOTAL CAMPAIGNS CREATED</span>
+                    <span className="font-serif-source text-2xl font-bold text-[#1d1a24] mt-1 block">
+                      {promosList.length} Campaigns
+                    </span>
+                    <span className="text-[11px] text-[#7b7486] block mt-0.5">Active, paused &amp; expired</span>
+                  </div>
+
+                  <div className="bg-white rounded-2xl p-4 border border-[#ccc3d7]/40 shadow-xs">
+                    <span className="text-[10px] font-bold text-[#7b7486] uppercase block">CATEGORY COVERAGE</span>
+                    <span className="font-serif-source text-2xl font-bold text-purple-800 mt-1 block">
+                      All Marketplace
+                    </span>
+                    <span className="text-[11px] text-[#7b7486] block mt-0.5">Electronics, Fashion, Auto</span>
+                  </div>
+                </div>
+
+                {/* Search & Actions Bar */}
+                <div className="bg-white rounded-3xl p-5 border border-[#ccc3d7]/40 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+                  <div className="relative flex-1">
+                    <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#7b7486] text-[20px]">
+                      search
+                    </span>
+                    <input
+                      type="text"
+                      value={promosSearch}
+                      onChange={(e) => setPromosSearch(e.target.value)}
+                      placeholder="Search promo code, campaign title, or applicable category..."
+                      className="w-full bg-[#fef7ff] border border-[#ccc3d7] rounded-2xl pl-11 pr-4 py-2.5 text-xs font-bold text-[#1d1a24] focus:outline-none focus:ring-2 focus:ring-[#5300b7]/30"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={promosStatusFilter}
+                      onChange={(e) => setPromosStatusFilter(e.target.value as any)}
+                      className="bg-[#fef7ff] border border-[#ccc3d7] rounded-2xl px-3.5 py-2.5 text-xs font-bold text-[#1d1a24] focus:outline-none cursor-pointer"
+                    >
+                      <option value="ALL">All Statuses</option>
+                      <option value="Active">Active</option>
+                      <option value="Paused">Paused</option>
+                      <option value="Expired">Expired</option>
+                    </select>
+
+                    <button
+                      onClick={() => {
+                        const headers = [
+                          'Promo Ref',
+                          'Code',
+                          'Title',
+                          'Type',
+                          'Value',
+                          'Min Spend (MWK)',
+                          'Max Usage',
+                          'Used Count',
+                          'Category',
+                          'Start Date',
+                          'Expiry Date',
+                          'Status'
+                        ];
+                        const rows = filteredPromos.map((p: any) => [
+                          p.id,
+                          p.code,
+                          p.title,
+                          p.type,
+                          p.type === 'percentage' ? `${p.discountValue}%` : `MWK ${p.discountValue}`,
+                          p.minSpend,
+                          p.maxUsage,
+                          p.usedCount,
+                          p.applicableCategory,
+                          p.startDate,
+                          p.expiryDate,
+                          p.status
+                        ]);
+                        handleExportToExcel('Promotional_Vouchers_Report', headers, rows);
+                      }}
+                      className="bg-[#107c41] hover:bg-[#0b5c30] text-white px-4 py-2.5 rounded-2xl text-xs font-bold shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2 shrink-0 uppercase tracking-wider"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">download</span>
+                      <span>Excel Report</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Promotions Table */}
+                <div className="bg-white rounded-3xl border border-[#ccc3d7]/40 shadow-xs overflow-hidden">
+                  <div className="p-5 bg-[#fef7ff] border-b border-[#ccc3d7]/30 flex items-center justify-between">
+                    <div>
+                      <h3 className="font-serif-source font-bold text-lg text-[#1d1a24]">
+                        Promotional Codes Directory ({filteredPromos.length})
+                      </h3>
+                      <p className="text-xs text-[#7b7486]">Manage active discount vouchers for checkout</p>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-[#fef7ff] border-b border-[#ccc3d7]/30 text-[10px] font-bold text-[#7b7486] uppercase tracking-wider">
+                          <th className="p-4">Promo Code &amp; ID</th>
+                          <th className="p-4">Campaign Title</th>
+                          <th className="p-4">Discount Value</th>
+                          <th className="p-4 text-right">Min Order Spend</th>
+                          <th className="p-4 text-center">Redemptions</th>
+                          <th className="p-4">Category &amp; Expiry</th>
+                          <th className="p-4 text-center">Status</th>
+                          <th className="p-4 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#ccc3d7]/20">
+                        {filteredPromos.length === 0 ? (
+                          <tr>
+                            <td colSpan={8} className="p-8 text-center text-[#7b7486]">
+                              No promotional vouchers found matching your query.
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredPromos.map((p: any) => (
+                            <tr key={p.id} className="hover:bg-[#fef7ff]/60 transition-colors">
+                              <td className="p-4">
+                                <div className="font-mono font-extrabold text-[#5300b7] bg-[#f3ebf9] px-2.5 py-1 rounded-lg inline-block text-xs border border-[#5300b7]/20">
+                                  {p.code}
+                                </div>
+                                <div className="text-[10px] text-[#7b7486] mt-0.5">{p.id}</div>
+                              </td>
+                              <td className="p-4">
+                                <div className="font-bold text-[#1d1a24] text-xs">{p.title}</div>
+                                <div className="text-[10px] text-[#7b7486] max-w-[200px] truncate">{p.description}</div>
+                              </td>
+                              <td className="p-4 font-bold text-emerald-700 text-xs">
+                                {p.type === 'percentage' ? (
+                                  <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-md">
+                                    {p.discountValue}% OFF
+                                  </span>
+                                ) : (
+                                  <span className="bg-blue-50 text-blue-800 border border-blue-200 px-2 py-0.5 rounded-md">
+                                    MWK {p.discountValue.toLocaleString()} OFF
+                                  </span>
+                                )}
+                              </td>
+                              <td className="p-4 text-right font-serif-source font-bold text-[#1d1a24]">
+                                MWK {p.minSpend.toLocaleString()}
+                              </td>
+                              <td className="p-4 text-center">
+                                <div className="font-bold text-[#1d1a24]">
+                                  {p.usedCount} / {p.maxUsage}
+                                </div>
+                                <div className="w-16 bg-gray-200 rounded-full h-1.5 mx-auto mt-1 overflow-hidden">
+                                  <div
+                                    className="bg-[#5300b7] h-1.5 rounded-full"
+                                    style={{ width: `${Math.min(100, (p.usedCount / p.maxUsage) * 100)}%` }}
+                                  />
+                                </div>
+                              </td>
+                              <td className="p-4">
+                                <div className="font-bold text-[#1d1a24]">{p.applicableCategory}</div>
+                                <div className="text-[10px] text-[#7b7486]">Expires: {p.expiryDate}</div>
+                              </td>
+                              <td className="p-4 text-center">
+                                <span
+                                  className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase ${
+                                    p.status === 'Active'
+                                      ? 'bg-emerald-100 text-emerald-800'
+                                      : p.status === 'Paused'
+                                      ? 'bg-amber-100 text-amber-800'
+                                      : 'bg-gray-100 text-gray-700'
+                                  }`}
+                                >
+                                  {p.status}
+                                </span>
+                              </td>
+                              <td className="p-4 text-right">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <button
+                                    onClick={() => handleTogglePromoStatus(p.id)}
+                                    title={p.status === 'Active' ? 'Pause Promo' : 'Activate Promo'}
+                                    className="p-1.5 bg-gray-100 hover:bg-gray-200 text-[#1d1a24] rounded-xl cursor-pointer"
+                                  >
+                                    <span className="material-symbols-outlined text-[16px]">
+                                      {p.status === 'Active' ? 'pause_circle' : 'play_circle'}
+                                    </span>
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setEditingPromo(p);
+                                      setPromoFormData({
+                                        code: p.code,
+                                        title: p.title,
+                                        type: p.type,
+                                        discountValue: String(p.discountValue),
+                                        minSpend: String(p.minSpend),
+                                        maxUsage: String(p.maxUsage),
+                                        startDate: p.startDate,
+                                        expiryDate: p.expiryDate,
+                                        applicableCategory: p.applicableCategory,
+                                        description: p.description
+                                      });
+                                      setIsAddPromoModalOpen(true);
+                                    }}
+                                    title="Edit Promo"
+                                    className="p-1.5 bg-[#f3ebf9] hover:bg-[#e4d3f5] text-[#5300b7] rounded-xl cursor-pointer"
+                                  >
+                                    <span className="material-symbols-outlined text-[16px]">edit</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeletePromo(p.id)}
+                                    title="Delete Promo"
+                                    className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl cursor-pointer"
+                                  >
+                                    <span className="material-symbols-outlined text-[16px]">delete</span>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* ==================== CREATE / EDIT PROMOTION MODAL ==================== */}
+          {isAddPromoModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+              <div className="bg-white w-full max-w-xl rounded-3xl shadow-2xl border border-[#ccc3d7]/40 overflow-hidden flex flex-col max-h-[90vh]">
+                <div className="p-5 bg-[#fef7ff] border-b border-[#ccc3d7]/30 flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-[#5300b7] text-white rounded-xl">
+                      <span className="material-symbols-outlined text-[20px]">local_offer</span>
+                    </div>
+                    <div>
+                      <h3 className="font-serif-source font-bold text-lg text-[#1d1a24]">
+                        {editingPromo ? 'Edit Promotion Campaign' : 'Create New Promotional Voucher'}
+                      </h3>
+                      <p className="text-xs text-[#7b7486]">Configure coupon code, discounts, and order constraints</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAddPromoModalOpen(false);
+                      setEditingPromo(null);
+                    }}
+                    className="p-1.5 text-[#4a4455] hover:text-[#1d1a24] hover:bg-[#f3ebf9] rounded-xl cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">close</span>
+                  </button>
+                </div>
+
+                <form onSubmit={handleSavePromoForm} className="p-6 overflow-y-auto space-y-4 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Code */}
+                    <div>
+                      <label className="block text-[10px] font-bold text-[#7b7486] uppercase mb-1">
+                        PROMO CODE *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={promoFormData.code}
+                        onChange={(e) => setPromoFormData({ ...promoFormData, code: e.target.value })}
+                        placeholder="e.g. MSiKA10"
+                        className="w-full bg-[#fef7ff] border border-[#ccc3d7] rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-[#1d1a24] uppercase focus:outline-none focus:ring-2 focus:ring-[#5300b7]/30"
+                      />
+                    </div>
+
+                    {/* Discount Type */}
+                    <div>
+                      <label className="block text-[10px] font-bold text-[#7b7486] uppercase mb-1">
+                        DISCOUNT TYPE *
+                      </label>
+                      <select
+                        value={promoFormData.type}
+                        onChange={(e) => setPromoFormData({ ...promoFormData, type: e.target.value as any })}
+                        className="w-full bg-[#fef7ff] border border-[#ccc3d7] rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1d1a24] focus:outline-none focus:ring-2 focus:ring-[#5300b7]/30 cursor-pointer"
+                      >
+                        <option value="percentage">Percentage Discount (%)</option>
+                        <option value="fixed">Fixed Amount Off (MWK)</option>
+                      </select>
+                    </div>
+
+                    {/* Title */}
+                    <div className="sm:col-span-2">
+                      <label className="block text-[10px] font-bold text-[#7b7486] uppercase mb-1">
+                        CAMPAIGN TITLE *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={promoFormData.title}
+                        onChange={(e) => setPromoFormData({ ...promoFormData, title: e.target.value })}
+                        placeholder="e.g. 10% Off Welcome Discount for New Buyers"
+                        className="w-full bg-[#fef7ff] border border-[#ccc3d7] rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1d1a24] focus:outline-none focus:ring-2 focus:ring-[#5300b7]/30"
+                      />
+                    </div>
+
+                    {/* Value */}
+                    <div>
+                      <label className="block text-[10px] font-bold text-[#7b7486] uppercase mb-1">
+                        DISCOUNT VALUE ({promoFormData.type === 'percentage' ? '%' : 'MWK'}) *
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        min="1"
+                        value={promoFormData.discountValue}
+                        onChange={(e) => setPromoFormData({ ...promoFormData, discountValue: e.target.value })}
+                        placeholder={promoFormData.type === 'percentage' ? '10' : '5000'}
+                        className="w-full bg-[#fef7ff] border border-[#ccc3d7] rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1d1a24] focus:outline-none focus:ring-2 focus:ring-[#5300b7]/30"
+                      />
+                    </div>
+
+                    {/* Min Spend */}
+                    <div>
+                      <label className="block text-[10px] font-bold text-[#7b7486] uppercase mb-1">
+                        MINIMUM ORDER SPEND (MWK) *
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        min="0"
+                        value={promoFormData.minSpend}
+                        onChange={(e) => setPromoFormData({ ...promoFormData, minSpend: e.target.value })}
+                        placeholder="10000"
+                        className="w-full bg-[#fef7ff] border border-[#ccc3d7] rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1d1a24] focus:outline-none focus:ring-2 focus:ring-[#5300b7]/30"
+                      />
+                    </div>
+
+                    {/* Max Usage */}
+                    <div>
+                      <label className="block text-[10px] font-bold text-[#7b7486] uppercase mb-1">
+                        MAXIMUM USAGE LIMIT (REDEMPTIONS)
+                      </label>
+                      <input
+                        type="number"
+                        required
+                        min="1"
+                        value={promoFormData.maxUsage}
+                        onChange={(e) => setPromoFormData({ ...promoFormData, maxUsage: e.target.value })}
+                        placeholder="200"
+                        className="w-full bg-[#fef7ff] border border-[#ccc3d7] rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1d1a24] focus:outline-none focus:ring-2 focus:ring-[#5300b7]/30"
+                      />
+                    </div>
+
+                    {/* Category */}
+                    <div>
+                      <label className="block text-[10px] font-bold text-[#7b7486] uppercase mb-1">
+                        APPLICABLE CATEGORY
+                      </label>
+                      <select
+                        value={promoFormData.applicableCategory}
+                        onChange={(e) => setPromoFormData({ ...promoFormData, applicableCategory: e.target.value })}
+                        className="w-full bg-[#fef7ff] border border-[#ccc3d7] rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1d1a24] focus:outline-none focus:ring-2 focus:ring-[#5300b7]/30 cursor-pointer"
+                      >
+                        <option value="All Products">All Products</option>
+                        <option value="Electronics">Electronics</option>
+                        <option value="Fashion">Fashion</option>
+                        <option value="Automobiles">Automobiles</option>
+                        <option value="Real Estate">Real Estate</option>
+                      </select>
+                    </div>
+
+                    {/* Expiry Date */}
+                    <div className="sm:col-span-2">
+                      <label className="block text-[10px] font-bold text-[#7b7486] uppercase mb-1">
+                        EXPIRY DATE *
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={promoFormData.expiryDate}
+                        onChange={(e) => setPromoFormData({ ...promoFormData, expiryDate: e.target.value })}
+                        className="w-full bg-[#fef7ff] border border-[#ccc3d7] rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#1d1a24] focus:outline-none focus:ring-2 focus:ring-[#5300b7]/30 cursor-pointer"
+                      />
+                    </div>
+
+                    {/* Description */}
+                    <div className="sm:col-span-2">
+                      <label className="block text-[10px] font-bold text-[#7b7486] uppercase mb-1">
+                        CAMPAIGN DESCRIPTION
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={promoFormData.description}
+                        onChange={(e) => setPromoFormData({ ...promoFormData, description: e.target.value })}
+                        placeholder="Brief summary of terms, applicable items, or holiday promotion details..."
+                        className="w-full bg-[#fef7ff] border border-[#ccc3d7] rounded-xl p-3 text-xs text-[#1d1a24] focus:outline-none focus:ring-2 focus:ring-[#5300b7]/30"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="pt-4 border-t border-[#ccc3d7]/30 flex items-center justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAddPromoModalOpen(false);
+                        setEditingPromo(null);
+                      }}
+                      className="px-5 py-2.5 rounded-xl font-bold text-xs text-[#4a4455] hover:bg-gray-100 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-6 py-2.5 bg-[#5300b7] hover:bg-[#6d28d9] text-white font-bold text-xs rounded-xl shadow-md cursor-pointer uppercase tracking-wider flex items-center gap-2"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                      <span>{editingPromo ? 'Save Promo Changes' : 'Activate Promotion'}</span>
+                    </button>
                   </div>
                 </form>
-              )}
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="text-left text-[#7b7486] border-b border-[#ccc3d7]/40">
-                      <th className="py-2 pr-3">Code</th>
-                      <th className="py-2 pr-3">Discount</th>
-                      <th className="py-2 pr-3">Used / Max</th>
-                      <th className="py-2 pr-3">Expires</th>
-                      <th className="py-2 pr-3">Status</th>
-                      <th className="py-2 pr-3">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {promosList.length === 0 && (
-                      <tr><td colSpan={6} className="py-6 text-center text-[#7b7486]">No promo codes yet — create one above.</td></tr>
-                    )}
-                    {promosList.map((p: any) => (
-                      <tr key={p.id} className="border-b border-[#ccc3d7]/20">
-                        <td className="py-2 pr-3 font-bold text-[#5300b7]">{p.code}</td>
-                        <td className="py-2 pr-3">{p.type === 'fixed' ? `MWK ${p.discountValue}` : `${p.discountValue}%`}</td>
-                        <td className="py-2 pr-3">{p.usedCount} / {p.maxUsage || '∞'}</td>
-                        <td className="py-2 pr-3">{p.expiryDate || '—'}</td>
-                        <td className="py-2 pr-3">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${p.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : p.status === 'Expired' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'}`}>{p.status}</span>
-                        </td>
-                        <td className="py-2 pr-3 flex gap-1.5">
-                          <button
-                            onClick={() => {
-                              setEditingPromo(p);
-                              setPromoFormData({
-                                code: p.code,
-                                title: p.title,
-                                type: p.type,
-                                discountValue: String(p.discountValue),
-                                minSpend: String(p.minSpend),
-                                maxUsage: String(p.maxUsage),
-                                startDate: p.startDate,
-                                expiryDate: p.expiryDate,
-                                applicableCategory: p.applicableCategory,
-                                description: p.description,
-                              });
-                              setIsAddPromoModalOpen(true);
-                            }}
-                            className="px-2.5 py-1 bg-white border border-[#ccc3d7] rounded-lg text-[10px] font-bold hover:bg-[#eff4ff]"
-                          >
-                            Edit
-                          </button>
-                          <button onClick={() => handleTogglePromoStatus(p.id)} className="px-2.5 py-1 bg-white border border-[#ccc3d7] rounded-lg text-[10px] font-bold hover:bg-[#eff4ff]">
-                            {p.status === 'Active' ? 'Pause' : 'Activate'}
-                          </button>
-                          <button onClick={() => handleDeletePromo(p.id)} className="px-2.5 py-1 bg-white border border-rose-300 text-rose-600 rounded-lg text-[10px] font-bold hover:bg-rose-50">Delete</button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
               </div>
             </div>
           )}
@@ -3516,68 +4101,389 @@ export const AdminView: React.FC<AdminViewProps> = ({
           )}
 
           {/* ==================== INBOX TAB ==================== */}
-          {activeNav === 'inbox' && (
-            <div className="bg-white rounded-3xl border border-[#ccc3d7]/40 shadow-xs grid grid-cols-1 md:grid-cols-5 overflow-hidden" style={{ minHeight: 420 }}>
-              <div className="md:col-span-2 border-r border-[#ccc3d7]/30 overflow-y-auto max-h-[520px]">
-                <div className="p-4 border-b border-[#ccc3d7]/30">
-                  <h3 className="font-serif-source text-lg font-bold text-[#1d1a24]">Support &amp; Admin Inbox</h3>
-                  <p className="text-[10px] text-[#7b7486]">{inboxList.length} conversation{inboxList.length !== 1 ? 's' : ''}</p>
+          {activeNav === 'inbox' && (() => {
+            const filteredInbox = inboxList.filter((m: any) => {
+              const matchesSearch =
+                m.senderName.toLowerCase().includes(inboxSearch.toLowerCase()) ||
+                m.subject.toLowerCase().includes(inboxSearch.toLowerCase()) ||
+                (m.phone || '').includes(inboxSearch) ||
+                m.id.toLowerCase().includes(inboxSearch.toLowerCase());
+
+              let matchesRole = true;
+              if (inboxRoleFilter === 'Unread') matchesRole = !m.isRead;
+              else if (inboxRoleFilter !== 'ALL') matchesRole = m.senderRole === inboxRoleFilter;
+
+              return matchesSearch && matchesRole;
+            });
+
+            const unreadCount = inboxList.filter((m: any) => !m.isRead).length;
+
+            return (
+              <div className="space-y-6">
+                {/* Header Banner */}
+                <div className="bg-gradient-to-r from-[#1d1a24] via-[#5300b7] to-[#1d1a24] text-white rounded-3xl p-6 sm:p-8 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                  <div>
+                    <div className="flex items-center gap-2 text-purple-200 text-xs font-bold uppercase tracking-wider mb-2">
+                      <span className="material-symbols-outlined text-[18px]">mark_email_unread</span>
+                      Central Support &amp; Admin Inbox
+                    </div>
+                    <h2 className="font-serif-source text-2xl sm:text-3xl font-bold tracking-tight">
+                      Seller, Buyer &amp; Affiliate Messages
+                    </h2>
+                    <p className="text-xs sm:text-sm text-purple-100 max-w-2xl mt-1">
+                      Direct messaging channel for merchant verification requests, commission inquiries, order dispute resolutions, and system support tickets.
+                    </p>
+                  </div>
+
+                  <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 flex items-center gap-3 shrink-0">
+                    <span className="material-symbols-outlined text-[28px] text-purple-200">mail</span>
+                    <div>
+                      <span className="text-[10px] font-bold text-purple-200 uppercase block tracking-wider">UNREAD TICKETS</span>
+                      <span className="font-serif-source text-2xl font-bold text-white">{unreadCount} Messages</span>
+                    </div>
+                  </div>
                 </div>
-                {inboxList.length === 0 && (
-                  <p className="p-6 text-xs text-center text-[#7b7486]">No customer conversations yet.</p>
-                )}
-                {inboxList.map((m: any) => (
-                  <button
-                    key={m.id}
-                    onClick={() => setSelectedInboxMsg(m)}
-                    className={`w-full text-left p-4 border-b border-[#ccc3d7]/20 hover:bg-[#eff4ff] transition-colors ${selectedInboxMsg?.id === m.id ? 'bg-[#eff4ff]' : ''}`}
-                  >
-                    <div className="flex justify-between items-start">
-                      <span className={`text-xs ${m.isRead ? 'font-semibold' : 'font-bold'} text-[#1d1a24]`}>{m.senderName}</span>
-                      <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold ${m.status === 'Resolved' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{m.status}</span>
+
+                {/* Filter and Search Bar */}
+                <div className="bg-white rounded-3xl p-5 border border-[#ccc3d7]/40 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+                  {/* Search Bar */}
+                  <div className="relative flex-1">
+                    <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[#7b7486] text-[20px]">
+                      search
+                    </span>
+                    <input
+                      type="text"
+                      value={inboxSearch}
+                      onChange={(e) => setInboxSearch(e.target.value)}
+                      placeholder="Search inbox by sender name, subject line, phone number, or message ID..."
+                      className="w-full bg-[#fef7ff] border border-[#ccc3d7] rounded-2xl pl-11 pr-4 py-2.5 text-xs font-bold text-[#1d1a24] focus:outline-none focus:ring-2 focus:ring-[#5300b7]/30"
+                    />
+                  </div>
+
+                  {/* Role Tabs */}
+                  <div className="flex flex-wrap items-center gap-1.5 bg-[#fef7ff] p-1.5 rounded-2xl border border-[#ccc3d7]/60">
+                    <button
+                      onClick={() => setInboxRoleFilter('ALL')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        inboxRoleFilter === 'ALL'
+                          ? 'bg-[#5300b7] text-white shadow-xs'
+                          : 'text-[#4a4455] hover:bg-white'
+                      }`}
+                    >
+                      All ({inboxList.length})
+                    </button>
+                    <button
+                      onClick={() => setInboxRoleFilter('Unread')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        inboxRoleFilter === 'Unread'
+                          ? 'bg-[#5300b7] text-white shadow-xs'
+                          : 'text-[#4a4455] hover:bg-white'
+                      }`}
+                    >
+                      Unread ({unreadCount})
+                    </button>
+                    <button
+                      onClick={() => setInboxRoleFilter('Seller')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        inboxRoleFilter === 'Seller'
+                          ? 'bg-[#5300b7] text-white shadow-xs'
+                          : 'text-[#4a4455] hover:bg-white'
+                      }`}
+                    >
+                      Sellers
+                    </button>
+                    <button
+                      onClick={() => setInboxRoleFilter('Buyer')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        inboxRoleFilter === 'Buyer'
+                          ? 'bg-[#5300b7] text-white shadow-xs'
+                          : 'text-[#4a4455] hover:bg-white'
+                      }`}
+                    >
+                      Buyers
+                    </button>
+                    <button
+                      onClick={() => setInboxRoleFilter('Affiliate')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        inboxRoleFilter === 'Affiliate'
+                          ? 'bg-[#5300b7] text-white shadow-xs'
+                          : 'text-[#4a4455] hover:bg-white'
+                      }`}
+                    >
+                      Affiliates
+                    </button>
+                  </div>
+                </div>
+
+                {/* Inbox Messages Grid / Table */}
+                <div className="bg-white rounded-3xl border border-[#ccc3d7]/40 shadow-xs overflow-hidden">
+                  <div className="p-5 bg-[#fef7ff] border-b border-[#ccc3d7]/30 flex items-center justify-between">
+                    <div>
+                      <h3 className="font-serif-source font-bold text-lg text-[#1d1a24]">
+                        Support Tickets &amp; User Messages ({filteredInbox.length})
+                      </h3>
+                      <p className="text-xs text-[#7b7486]">Click any message line to view full thread and send admin replies</p>
                     </div>
-                    <p className="text-[10px] text-[#7b7486] truncate">{m.subject}</p>
-                    <p className="text-[10px] text-[#4a4455] truncate">{m.message}</p>
-                  </button>
-                ))}
+                  </div>
+
+                  <div className="divide-y divide-[#ccc3d7]/20">
+                    {filteredInbox.length === 0 ? (
+                      <div className="p-12 text-center text-[#7b7486]">
+                        <span className="material-symbols-outlined text-[48px] text-gray-300 block mb-2">mark_email_read</span>
+                        <p className="font-bold text-[#1d1a24]">No messages match your inbox filter.</p>
+                        <p className="text-xs">Try selecting 'All' or searching for another term.</p>
+                      </div>
+                    ) : (
+                      filteredInbox.map((msg: any) => (
+                        <div
+                          key={msg.id}
+                          onClick={() => {
+                            setSelectedInboxMsg(msg);
+                            if (!msg.isRead) {
+                              handleToggleReadStatus(msg.id);
+                            }
+                          }}
+                          className={`p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-all cursor-pointer hover:bg-[#f3ebf9]/40 ${
+                            !msg.isRead ? 'bg-[#fef7ff] border-l-4 border-l-[#5300b7]' : 'bg-white'
+                          }`}
+                        >
+                          <div className="flex items-start gap-3 flex-1 min-w-0">
+                            {/* Role Icon */}
+                            <div
+                              className={`p-2.5 rounded-2xl shrink-0 ${
+                                msg.senderRole === 'Seller'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : msg.senderRole === 'Affiliate'
+                                  ? 'bg-purple-100 text-purple-800'
+                                  : 'bg-emerald-100 text-emerald-800'
+                              }`}
+                            >
+                              <span className="material-symbols-outlined text-[20px]">
+                                {msg.senderRole === 'Seller'
+                                  ? 'storefront'
+                                  : msg.senderRole === 'Affiliate'
+                                  ? 'group'
+                                  : 'person'}
+                              </span>
+                            </div>
+
+                            <div className="space-y-1 min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-bold text-[#1d1a24] text-xs">{msg.senderName}</span>
+                                <span
+                                  className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                                    msg.senderRole === 'Seller'
+                                      ? 'bg-blue-100 text-blue-800'
+                                      : msg.senderRole === 'Affiliate'
+                                      ? 'bg-purple-100 text-purple-800'
+                                      : 'bg-emerald-100 text-emerald-800'
+                                  }`}
+                                >
+                                  {msg.senderRole}
+                                </span>
+                                <span className="text-[10px] text-[#7b7486] font-mono">{msg.phone}</span>
+                                <span className="text-[10px] text-[#7b7486] font-bold bg-gray-100 px-2 py-0.5 rounded-md">
+                                  {msg.category}
+                                </span>
+                              </div>
+
+                              <h4 className={`text-xs font-bold ${!msg.isRead ? 'text-[#5300b7]' : 'text-[#1d1a24]'}`}>
+                                {msg.subject}
+                              </h4>
+                              <p className="text-xs text-[#4a4455] line-clamp-1">{msg.message}</p>
+                            </div>
+                          </div>
+
+                          {/* Status and Time */}
+                          <div className="flex items-center gap-3 shrink-0 self-end md:self-center">
+                            <span
+                              className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase ${
+                                msg.priority === 'Urgent'
+                                  ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                                  : msg.priority === 'High'
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : 'bg-gray-100 text-gray-700'
+                              }`}
+                            >
+                              {msg.priority}
+                            </span>
+
+                            <span
+                              className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase ${
+                                msg.status === 'Resolved'
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : msg.status === 'In Progress'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-amber-100 text-amber-800'
+                              }`}
+                            >
+                              {msg.status}
+                            </span>
+
+                            <span className="text-[10px] text-[#7b7486] whitespace-nowrap">{msg.timestamp}</span>
+
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteMessage(msg.id);
+                              }}
+                              title="Delete Message"
+                              className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer"
+                            >
+                              <span className="material-symbols-outlined text-[18px]">delete</span>
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="md:col-span-3 flex flex-col p-4">
-                {!selectedInboxMsg ? (
-                  <p className="m-auto text-xs text-[#7b7486]">Select a conversation to view and reply.</p>
-                ) : (
-                  <>
-                    <div className="flex justify-between items-start pb-3 border-b border-[#ccc3d7]/30 mb-3">
-                      <div>
-                        <p className="font-bold text-sm text-[#1d1a24]">{selectedInboxMsg.senderName}</p>
-                        <p className="text-[10px] text-[#7b7486]">{selectedInboxMsg.email} {selectedInboxMsg.phone && `· ${selectedInboxMsg.phone}`}</p>
-                      </div>
-                      <div className="flex gap-1.5">
-                        <button onClick={() => handleToggleReadStatus(selectedInboxMsg.id)} className="px-2.5 py-1 bg-white border border-[#ccc3d7] text-[#4a4455] rounded-lg text-[10px] font-bold hover:bg-[#eff4ff]">
-                          Mark {selectedInboxMsg.isRead ? 'Unread' : 'Read'}
-                        </button>
-                        <button onClick={() => handleResolveMessage(selectedInboxMsg.id)} className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-lg text-[10px] font-bold hover:bg-emerald-100">Mark Resolved</button>
-                        <button onClick={() => handleDeleteMessage(selectedInboxMsg.id)} className="px-2.5 py-1 bg-rose-50 text-rose-600 rounded-lg text-[10px] font-bold hover:bg-rose-100">Delete</button>
-                      </div>
+            );
+          })()}
+
+          {/* ==================== INBOX DETAIL & REPLY MODAL ==================== */}
+          {selectedInboxMsg && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
+              <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-[#ccc3d7]/40 overflow-hidden flex flex-col max-h-[90vh]">
+                {/* Header */}
+                <div className="p-5 bg-[#fef7ff] border-b border-[#ccc3d7]/30 flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`p-2.5 rounded-2xl ${
+                        selectedInboxMsg.senderRole === 'Seller'
+                          ? 'bg-blue-100 text-blue-800'
+                          : selectedInboxMsg.senderRole === 'Affiliate'
+                          ? 'bg-purple-100 text-purple-800'
+                          : 'bg-emerald-100 text-emerald-800'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-[22px]">
+                        {selectedInboxMsg.senderRole === 'Seller'
+                          ? 'storefront'
+                          : selectedInboxMsg.senderRole === 'Affiliate'
+                          ? 'group'
+                          : 'person'}
+                      </span>
                     </div>
-                    <div className="flex-1 overflow-y-auto space-y-2 mb-3">
-                      <div className="bg-[#eff4ff] rounded-xl p-3 text-xs text-[#1d1a24] max-w-[85%]">{selectedInboxMsg.message}</div>
-                      {(selectedInboxMsg.replies || []).map((r: any, i: number) => (
-                        <div key={i} className={`rounded-xl p-3 text-xs max-w-[85%] ${r.sender === 'Admin Support' ? 'bg-[#5300b7] text-white ml-auto' : 'bg-[#eff4ff] text-[#1d1a24]'}`}>
-                          {r.text}
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-serif-source font-bold text-lg text-[#1d1a24]">
+                          {selectedInboxMsg.senderName}
+                        </h3>
+                        <span className="px-2 py-0.5 bg-purple-100 text-purple-800 text-[10px] font-bold rounded-md">
+                          {selectedInboxMsg.senderRole}
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#7b7486]">
+                        Phone: {selectedInboxMsg.phone} • Email: {selectedInboxMsg.email}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setSelectedInboxMsg(null)}
+                    className="p-1.5 text-[#4a4455] hover:text-[#1d1a24] hover:bg-[#f3ebf9] rounded-xl cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">close</span>
+                  </button>
+                </div>
+
+                {/* Message Content */}
+                <div className="p-6 overflow-y-auto space-y-4 text-xs">
+                  {/* Status Bar */}
+                  <div className="bg-[#fef7ff] rounded-2xl p-4 border border-[#ccc3d7]/40 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <span className="text-[10px] font-bold text-[#7b7486] uppercase block">SUBJECT</span>
+                      <p className="font-bold text-[#1d1a24] text-sm">{selectedInboxMsg.subject}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-gray-100 text-gray-700">
+                        {selectedInboxMsg.category}
+                      </span>
+                      <button
+                        onClick={() => handleResolveMessage(selectedInboxMsg.id)}
+                        className={`px-3 py-1 rounded-full text-[10px] font-extrabold uppercase transition-all cursor-pointer ${
+                          selectedInboxMsg.status === 'Resolved'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : 'bg-amber-100 text-amber-800 hover:bg-emerald-100 hover:text-emerald-800'
+                        }`}
+                      >
+                        {selectedInboxMsg.status === 'Resolved' ? '✓ Ticket Resolved' : 'Mark as Resolved'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Original Sender Message */}
+                  <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200 space-y-2">
+                    <div className="flex items-center justify-between text-[10px] text-[#7b7486]">
+                      <span className="font-bold text-[#1d1a24]">{selectedInboxMsg.senderName}</span>
+                      <span>{selectedInboxMsg.timestamp}</span>
+                    </div>
+                    <p className="text-xs text-[#1d1a24] leading-relaxed whitespace-pre-wrap">
+                      {selectedInboxMsg.message}
+                    </p>
+                  </div>
+
+                  {/* Previous Thread Replies */}
+                  {(selectedInboxMsg.replies || []).length > 0 && (
+                    <div className="space-y-3 pt-2">
+                      <h4 className="text-[10px] font-bold text-[#7b7486] uppercase tracking-wider">
+                        CONVERSATION THREAD ({selectedInboxMsg.replies.length})
+                      </h4>
+                      {selectedInboxMsg.replies.map((r: any, idx: number) => (
+                        <div
+                          key={idx}
+                          className={`p-3.5 rounded-2xl text-xs space-y-1 ${
+                            r.sender === 'Admin Support'
+                              ? 'bg-[#f3ebf9] text-[#1d1a24] border border-[#5300b7]/20 ml-4'
+                              : 'bg-gray-50 text-[#1d1a24] border border-gray-200 mr-4'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between text-[10px] font-bold text-[#5300b7]">
+                            <span>{r.sender}</span>
+                            <span className="text-[#7b7486] font-normal">{r.time}</span>
+                          </div>
+                          <p className="leading-relaxed">{r.text}</p>
                         </div>
                       ))}
                     </div>
-                    <form onSubmit={handleSendAdminReply} className="flex gap-2">
-                      <input
-                        value={adminReplyInput}
-                        onChange={(e) => setAdminReplyInput(e.target.value)}
-                        placeholder="Type a reply..."
-                        className="flex-1 bg-white border border-[#ccc3d7] rounded-xl px-3 py-2 text-xs"
-                      />
-                      <button type="submit" className="px-4 py-2 bg-[#5300b7] text-white rounded-xl text-xs font-bold hover:bg-[#6d28d9]">Send</button>
-                    </form>
-                  </>
-                )}
+                  )}
+
+                  {/* Reply Form */}
+                  <form onSubmit={handleSendAdminReply} className="pt-3 border-t border-[#ccc3d7]/30 space-y-3">
+                    <label className="block text-[10px] font-bold text-[#7b7486] uppercase">
+                      REPLY TO USER / SELLER
+                    </label>
+                    <textarea
+                      rows={3}
+                      required
+                      value={adminReplyInput}
+                      onChange={(e) => setAdminReplyInput(e.target.value)}
+                      placeholder="Type official admin response or instructions..."
+                      className="w-full bg-[#fef7ff] border border-[#ccc3d7] rounded-xl p-3 text-xs text-[#1d1a24] focus:outline-none focus:ring-2 focus:ring-[#5300b7]/30"
+                    />
+
+                    <div className="flex items-center justify-between">
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteMessage(selectedInboxMsg.id)}
+                        className="text-rose-600 hover:text-rose-800 text-xs font-bold cursor-pointer flex items-center gap-1"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">delete</span>
+                        <span>Delete Thread</span>
+                      </button>
+
+                      <button
+                        type="submit"
+                        className="px-6 py-2.5 bg-[#5300b7] hover:bg-[#6d28d9] text-white font-bold text-xs rounded-xl shadow-md cursor-pointer uppercase tracking-wider flex items-center gap-2"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">send</span>
+                        <span>Send Reply</span>
+                      </button>
+                    </div>
+                  </form>
+                </div>
               </div>
             </div>
           )}
