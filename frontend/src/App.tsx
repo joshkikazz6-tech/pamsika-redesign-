@@ -877,6 +877,7 @@ export default function App() {
           onToggleDarkMode={handleToggleDarkMode}
           userName={user?.full_name}
           userRole={user?.is_admin ? 'Admin' : user?.is_seller ? 'Seller' : user?.is_affiliate ? 'Affiliate' : 'Member'}
+          isAdmin={!!user?.is_admin}
         />
       )}
 

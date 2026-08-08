@@ -13,6 +13,7 @@ interface HeaderProps {
   onToggleDarkMode?: () => void;
   userName?: string;
   userRole?: string;
+  isAdmin?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -28,6 +29,7 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleDarkMode,
   userName,
   userRole = 'Member',
+  isAdmin = false,
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const cities = ['Lilongwe', 'Blantyre', 'Mzuzu', 'Zomba'];
@@ -57,7 +59,7 @@ export const Header: React.FC<HeaderProps> = ({
   const portalItems = [
     { id: 'dolo', label: 'Dolo Affiliate Hub', icon: 'token' },
     { id: 'seller', label: 'SellerHub Dashboard', icon: 'store' },
-    { id: 'admin', label: 'Super Admin Portal', icon: 'dashboard_customize' },
+    ...(isAdmin ? [{ id: 'admin', label: 'Super Admin Portal', icon: 'dashboard_customize' }] : []),
   ];
 
   return (
