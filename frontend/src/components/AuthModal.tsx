@@ -20,6 +20,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onShowToast }) => {
     setError(null);
   }, [authModalMode, authModalOpen]);
 
+  useEffect(() => {
+    if (!authModalOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeAuthModal();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [authModalOpen, closeAuthModal]);
+
   if (!authModalOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,7 +41,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onShowToast }) => {
         onShowToast('Welcome back!');
       } else {
         await register(fullName, email, password);
-        onShowToast('Account created â€” welcome to Pa_mSikA!');
+        onShowToast('Account created — welcome to Pa_mSikA!');
       }
       setFullName('');
       setEmail('');
@@ -46,8 +55,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onShowToast }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl max-w-sm w-full overflow-hidden shadow-2xl p-6 animate-in fade-in zoom-in duration-200">
+    <div
+      className="pm-dialog-backdrop"
+      onClick={closeAuthModal}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={mode === 'login' ? 'Welcome back' : 'Create your account'}
+        onClick={(e) => e.stopPropagation()}
+        className="pm-dialog-card max-w-sm w-full overflow-hidden p-6"
+      >
         <div className="flex justify-between items-center mb-1">
           <span className="font-serif-source text-lg font-bold text-[#5300b7]">Pa_mSikA</span>
           <button onClick={closeAuthModal} className="text-[#7b7486] hover:text-[#121c2a]" title="Close">
@@ -98,7 +116,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onShowToast }) => {
               required
               minLength={8}
               className="w-full bg-[#eff4ff] border border-[#ccc3d7]/50 rounded-xl px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#5300b7]/30"
-              placeholder={mode === 'register' ? 'Min 8 chars, 1 uppercase, 1 number' : 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢'}
+              placeholder={mode === 'register' ? 'Min 8 chars, 1 uppercase, 1 number' : '••••••••'}
             />
           </div>
 
@@ -113,7 +131,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ onShowToast }) => {
             disabled={submitting}
             className="w-full bg-[#5300b7] hover:bg-[#6d28d9] text-white py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider shadow-lg active:scale-95 transition-all disabled:opacity-60"
           >
-            {submitting ? 'Please waitâ€¦' : mode === 'login' ? 'Sign In' : 'Create Account'}
+            {submitting ? 'Please wait…' : mode === 'login' ? 'Sign In' : 'Create Account'}
           </button>
         </form>
 

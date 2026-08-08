@@ -20,6 +20,15 @@ export const OrderMethodsModal: React.FC<OrderMethodsModalProps> = ({
   onClose,
   onSelectMethod,
 }) => {
+  React.useEffect(() => {
+    if (!product && (!cartItems || cartItems.length === 0)) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [product, cartItems, onClose]);
+
   if (!product && (!cartItems || cartItems.length === 0)) return null;
 
   const orderId = `ORD-${Math.floor(10000 + Math.random() * 90000)}`;
@@ -53,21 +62,21 @@ export const OrderMethodsModal: React.FC<OrderMethodsModalProps> = ({
       const commissionVal = Math.round((product.price * (product.commission || 5)) / 100);
       const productLink = `${origin}${cleanPath}?product=${product.id}`;
 
-      messageText = `🛒 Pa_mSikA OFFICIAL ORDER INQUIRY
+      messageText = `?? Pa_mSikA OFFICIAL ORDER INQUIRY
 
-🆔 Order Ref: ${orderId}
+?? Order Ref: ${orderId}
 
-📦 ORDERED ITEM DETAILS:
-• Item: ${product.name}
-• Price: MWK ${product.price.toLocaleString()}
-• Category: ${product.category}
-• Commission: MWK ${commissionVal.toLocaleString()} (${product.commission || 5}%)
-• Merchant: ${product.sellerName || 'Verified Merchant'}
+?? ORDERED ITEM DETAILS:
+- Item: ${product.name}
+- Price: MWK ${product.price.toLocaleString()}
+- Category: ${product.category}
+- Commission: MWK ${commissionVal.toLocaleString()} (${product.commission || 5}%)
+- Merchant: ${product.sellerName || 'Verified Merchant'}
 
-🔗 DIRECT PRODUCT LINK:
+?? DIRECT PRODUCT LINK:
 ${productLink}
 
-💬 CUSTOMER NOTE:
+?? CUSTOMER NOTE:
 "Hello Pa_mSikA Team, I would like to place an order for this item. Please confirm item availability and delivery details."`;
     } else if (isCartCheckout && cartItems) {
       const itemsListStr = cartItems
@@ -76,26 +85,26 @@ ${productLink}
           const comm = Math.round((p.price * (p.commission || 5)) / 100);
           const link = `${origin}${cleanPath}?product=${p.id}`;
           return `${idx + 1}. ${item.quantity}x ${p.name}
-   • Price: MWK ${(p.price * item.quantity).toLocaleString()} (MWK ${p.price.toLocaleString()} ea)
-   • Category: ${p.category} | Merchant: ${p.sellerName || 'Verified Merchant'}
-   • Commission: MWK ${(comm * item.quantity).toLocaleString()} (${p.commission || 5}%)
-   • Link: ${link}`;
+   � Price: MWK ${(p.price * item.quantity).toLocaleString()} (MWK ${p.price.toLocaleString()} ea)
+   � Category: ${p.category} | Merchant: ${p.sellerName || 'Verified Merchant'}
+   � Commission: MWK ${(comm * item.quantity).toLocaleString()} (${p.commission || 5}%)
+   � Link: ${link}`;
         })
         .join('\n\n');
 
-      messageText = `🛒 Pa_mSikA SHOPPING BAG ORDER
+      messageText = `?? Pa_mSikA SHOPPING BAG ORDER
 
-🆔 Order Ref: ${orderId}
+?? Order Ref: ${orderId}
 
-📦 BAG ITEMS (${totalItemsCount} Items):
+?? BAG ITEMS (${totalItemsCount} Items):
 ${itemsListStr}
 
-💰 FINANCIAL SUMMARY:
-• Subtotal: MWK ${subtotalVal.toLocaleString()}
-${discount > 0 ? `• Voucher Discount: - MWK ${discount.toLocaleString()}\n` : ''}• Total Amount Payable: MWK ${totalVal.toLocaleString()}
-• Total Commission: MWK ${totalCartCommission.toLocaleString()}
+?? FINANCIAL SUMMARY:
+- Subtotal: MWK ${subtotalVal.toLocaleString()}
+${discount > 0 ? `� Voucher Discount: - MWK ${discount.toLocaleString()}\n` : ''}� Total Amount Payable: MWK ${totalVal.toLocaleString()}
+- Total Commission: MWK ${totalCartCommission.toLocaleString()}
 
-💬 CUSTOMER NOTE:
+?? CUSTOMER NOTE:
 "Hello Pa_mSikA Team, I would like to checkout my shopping bag. Please confirm order availability and delivery details."`;
     }
 
@@ -120,8 +129,14 @@ ${discount > 0 ? `• Voucher Discount: - MWK ${discount.toLocaleString()}\n` : 
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-zinc-900 rounded-3xl max-w-md w-full overflow-hidden shadow-2xl border border-slate-200 dark:border-zinc-800 flex flex-col max-h-[90vh]">
+    <div className="pm-dialog-backdrop" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={isCartCheckout ? 'Checkout Bag' : 'Choose Order Method'}
+        onClick={(e) => e.stopPropagation()}
+        className="pm-dialog-card max-w-md w-full overflow-hidden flex flex-col max-h-[90vh]"
+      >
         {/* Header */}
         <div className="p-5 bg-slate-50 dark:bg-zinc-800/80 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
@@ -307,5 +322,3 @@ ${discount > 0 ? `• Voucher Discount: - MWK ${discount.toLocaleString()}\n` : 
     </div>
   );
 };
-
-

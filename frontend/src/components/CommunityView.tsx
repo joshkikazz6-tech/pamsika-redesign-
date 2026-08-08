@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { CommunityPost, Product } from '../types';
+import { Dialog } from './Dialog';
 
 interface CommunityViewProps {
   posts: CommunityPost[];
@@ -34,6 +35,13 @@ export const CommunityView: React.FC<CommunityViewProps> = ({
   onOrderNow
 }) => {
   const [activeCategory, setActiveCategory] = useState<string>('All Posts');
+
+  // Themed confirmation dialog state for deleting a comment (replaces window.confirm)
+  const [commentToDelete, setCommentToDelete] = useState<{
+    postId: string;
+    commentId: string;
+    authorName: string;
+  } | null>(null);
 
   // Feed sorting mode: 'newest' | 'recommended' | 'popular' | 'shuffled'
   const [sortMode, setSortMode] = useState<'newest' | 'recommended' | 'popular' | 'shuffled'>('newest');
@@ -73,7 +81,7 @@ export const CommunityView: React.FC<CommunityViewProps> = ({
     const shuffled = [...posts].sort(() => Math.random() - 0.5);
     setShuffledPosts(shuffled);
     setSortMode('shuffled');
-    onShowToast('🔀 System Shuffle applied! Fresh feed order generated.');
+    onShowToast('?? System Shuffle applied! Fresh feed order generated.');
   };
 
   // Base list depending on shuffle or main posts
@@ -417,7 +425,7 @@ export const CommunityView: React.FC<CommunityViewProps> = ({
                       <span className="material-symbols-outlined text-[16px]">close</span>
                     </button>
                     <span className="absolute bottom-2 left-2 bg-black/70 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full backdrop-blur-sm">
-                      {adminPostImage.startsWith('data:') ? '📷 Local Device Photo Attached' : '🔗 Image URL Attached'}
+                      {adminPostImage.startsWith('data:') ? '?? Local Device Photo Attached' : '?? Image URL Attached'}
                     </span>
                   </div>
                 )}
@@ -532,7 +540,7 @@ export const CommunityView: React.FC<CommunityViewProps> = ({
                       <span>{post.timestamp}</span>
                       {post.categoryTag && (
                         <span className="font-semibold text-purple-600 dark:text-purple-400">
-                          • {post.categoryTag}
+                          � {post.categoryTag}
                         </span>
                       )}
                     </p>
@@ -703,9 +711,7 @@ export const CommunityView: React.FC<CommunityViewProps> = ({
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      if (confirm(`Admin Moderator: Delete comment by "${comm.authorName}"?`)) {
-                                        onDeleteComment(post.id, comm.id);
-                                      }
+                                      setCommentToDelete({ postId: post.id, commentId: comm.id, authorName: comm.authorName });
                                     }}
                                     className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/60 rounded-lg transition-colors flex items-center gap-0.5"
                                     title="Admin Moderator: Delete Comment"
@@ -795,6 +801,33 @@ export const CommunityView: React.FC<CommunityViewProps> = ({
           Stay tuned for real-time announcements from Pa_mSikA Admin.
         </p>
       </div>
+
+      {/* Themed confirmation dialog for deleting a comment */}
+      <Dialog
+        open={!!commentToDelete}
+        onClose={() => setCommentToDelete(null)}
+        variant="warning"
+        title="Delete this comment?"
+        description={
+          commentToDelete
+            ? `Admin Moderator: this will permanently remove the comment by "${commentToDelete.authorName}".`
+            : undefined
+        }
+        destructive
+        primaryAction={{
+          label: 'Delete',
+          onClick: () => {
+            if (commentToDelete) {
+              onDeleteComment?.(commentToDelete.postId, commentToDelete.commentId);
+            }
+            setCommentToDelete(null);
+          },
+        }}
+        secondaryAction={{
+          label: 'Cancel',
+          onClick: () => setCommentToDelete(null),
+        }}
+      />
     </div>
   );
 };

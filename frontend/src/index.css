@@ -141,3 +141,86 @@ html, body, * {
 .font-plus-jakarta { font-family: 'Plus Jakarta Sans', sans-serif; }
 .font-dm-sans { font-family: 'DM Sans', sans-serif; }
 
+/* ---------------------------------------------------------------- */
+/* Pa_mSikA themed dialog/modal system                              */
+/* Shared by Dialog.tsx, AuthModal, and OrderMethodsModal so every   */
+/* popup on the site opens with the same fade + scale motion and     */
+/* the same card/backdrop treatment.                                */
+/* ---------------------------------------------------------------- */
+@keyframes pm-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pm-card-in {
+  from { opacity: 0; transform: scale(0.94) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.pm-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background-color: rgba(12, 8, 20, 0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: pm-backdrop-in 0.2s ease-out;
+}
+
+.pm-dialog-card {
+  width: 100%;
+  border-radius: 20px;
+  background-color: #ffffff;
+  border: 1px solid #ebddff;
+  box-shadow: 0 25px 60px -15px rgba(83, 0, 183, 0.35), 0 10px 20px -10px rgba(12, 8, 20, 0.25);
+  animation: pm-card-in 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html.dark .pm-dialog-card {
+  background-color: #121212;
+  border-color: #2a2a2e;
+  box-shadow: 0 25px 60px -15px rgba(83, 0, 183, 0.45), 0 10px 20px -10px rgba(0, 0, 0, 0.6);
+}
+
+.pm-dialog-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.pm-dialog-icon--success { background-color: #ecfdf5; color: #059669; }
+.pm-dialog-icon--error   { background-color: #fef2f2; color: #dc2626; }
+.pm-dialog-icon--warning { background-color: #fffbeb; color: #d97706; }
+.pm-dialog-icon--confirm { background-color: #f5edff; color: #5300b7; }
+.pm-dialog-icon--info    { background-color: #eff4ff; color: #2563eb; }
+html.dark .pm-dialog-icon--success { background-color: rgba(5, 150, 105, 0.15); }
+html.dark .pm-dialog-icon--error   { background-color: rgba(220, 38, 38, 0.15); }
+html.dark .pm-dialog-icon--warning { background-color: rgba(217, 119, 6, 0.15); }
+html.dark .pm-dialog-icon--confirm { background-color: rgba(83, 0, 183, 0.2); }
+html.dark .pm-dialog-icon--info    { background-color: rgba(37, 99, 235, 0.15); }
+
+.pm-dialog-btn-primary {
+  background-color: #5300b7;
+  color: #ffffff;
+}
+.pm-dialog-btn-primary:hover { background-color: #6d28d9; }
+.pm-dialog-btn-primary--danger { background-color: #dc2626; }
+.pm-dialog-btn-primary--danger:hover { background-color: #b91c1c; }
+
+.pm-dialog-btn-secondary {
+  background-color: #f4f2fd;
+  color: #121c2a;
+}
+.pm-dialog-btn-secondary:hover { background-color: #ebe6fb; }
+html.dark .pm-dialog-btn-secondary {
+  background-color: #1f1f23;
+  color: #ffffff;
+}
+html.dark .pm-dialog-btn-secondary:hover { background-color: #29292f; }
