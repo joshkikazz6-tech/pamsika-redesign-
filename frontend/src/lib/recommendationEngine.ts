@@ -1,4 +1,5 @@
 import { Product } from '../types';
+import { Api } from './api';
 
 export interface UserPreferences {
   categoryViews: Record<string, number>;
@@ -52,6 +53,14 @@ export const trackProductView = (product: Product): UserPreferences => {
   prefs.totalViewsCount += 1;
 
   saveUserPreferences(prefs);
+
+  // Best-effort server-side log so the backend recommendation engine can
+  // learn from this too — only fires when signed in (feed personalization
+  // is an authenticated-only feature; guests still get client-only prefs).
+  if (Api.token) {
+    Api.logInteraction('view', { productId: product.id, category: product.category });
+  }
+
   return prefs;
 };
 
@@ -65,6 +74,11 @@ export const trackSearchQuery = (query: string): UserPreferences => {
     prefs.searchQueries = [cleanQuery, ...prefs.searchQueries.slice(0, 9)];
   }
   saveUserPreferences(prefs);
+
+  if (Api.token) {
+    Api.logInteraction('search', { searchQuery: cleanQuery });
+  }
+
   return prefs;
 };
 

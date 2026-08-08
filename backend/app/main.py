@@ -29,6 +29,7 @@ from app.models.affiliate import AffiliateClick, AffiliateWithdrawal       # noq
 from app.models.audit import AuditLog                                       # noqa
 from app.models.community import CommunityPost, CommunityComment, PostLike  # noqa
 from app.models.messages import Conversation, Message                       # noqa
+from app.models.interaction import UserInteraction                          # noqa
 from app.api.v1.endpoints.reviews import Review                             # noqa
 from app.api.v1.endpoints.promo import PromoCode                            # noqa
 
@@ -182,6 +183,24 @@ async def _fix_schema():
             created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
         )
     """)
+
+    # ── user_interactions — product discovery / recommendation tracking ────────
+    await _run("""
+        CREATE TABLE IF NOT EXISTS user_interactions (
+            id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            user_id          UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            interaction_type VARCHAR(20) NOT NULL,
+            product_id       UUID REFERENCES products(id) ON DELETE CASCADE,
+            category         VARCHAR(100),
+            search_query     VARCHAR(255),
+            created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+    """)
+    await _run("CREATE INDEX IF NOT EXISTS ix_user_interactions_user_id ON user_interactions(user_id)")
+    await _run("CREATE INDEX IF NOT EXISTS ix_user_interactions_product_id ON user_interactions(product_id)")
+    await _run("CREATE INDEX IF NOT EXISTS ix_user_interactions_category ON user_interactions(category)")
+    await _run("CREATE INDEX IF NOT EXISTS ix_user_interactions_interaction_type ON user_interactions(interaction_type)")
+    await _run("CREATE INDEX IF NOT EXISTS ix_user_interactions_created_at ON user_interactions(created_at)")
 
     logger.info("Schema fix complete")
 

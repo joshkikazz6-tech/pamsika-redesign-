@@ -16,6 +16,10 @@ interface SmartRecommendationFeedProps {
   onSelectProduct: (product: Product) => void;
   onOrderNow: (product: Product) => void;
   onShowToast: (msg: string) => void;
+  /** Optional — when provided, refresh also refetches the backend hybrid
+   * feed (personalized/trending/new/random) instead of only re-scoring
+   * whatever products are already in memory. */
+  onRefresh?: () => void | Promise<void>;
 }
 
 export const SmartRecommendationFeed: React.FC<SmartRecommendationFeedProps> = ({
@@ -27,6 +31,7 @@ export const SmartRecommendationFeed: React.FC<SmartRecommendationFeedProps> = (
   onSelectProduct,
   onOrderNow,
   onShowToast,
+  onRefresh,
 }) => {
   const [recommendations, setRecommendations] = useState<RecommendedProduct[]>([]);
   const [userPrefs, setUserPrefs] = useState<UserPreferences>(loadUserPreferences());
@@ -49,7 +54,12 @@ export const SmartRecommendationFeed: React.FC<SmartRecommendationFeedProps> = (
     return true;
   });
 
-  const handleRefreshFeed = () => {
+  const handleRefreshFeed = async () => {
+    if (onRefresh) {
+      // Refetch the backend hybrid feed (new personalized/trending/new/
+      // random mix), then re-score the fresh product set client-side.
+      await onRefresh();
+    }
     const recs = getSmartRecommendations(products, 8, wishlistIds, cartProductIds);
     setRecommendations(recs);
     onShowToast('🔄 Smart feed refreshed with new product recommendations!');

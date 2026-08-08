@@ -16,6 +16,7 @@ from app.models.user import User
 from app.schemas.common import CartOut, CartItemOut, CartItemAdd, CartItemUpdate
 from app.api.deps import bearer_scheme
 from app.core.security import decode_token
+from app.services.recommendations import record_interaction
 
 router = APIRouter(prefix="/cart", tags=["cart"])
 
@@ -181,6 +182,12 @@ async def add_item(
         db.add(item)
 
     await db.flush()
+
+    if user:
+        await record_interaction(
+            db, user.id, "cart_add", product_id=product.id, category=product.category
+        )
+
     return {"detail": "Item added"}
 
 

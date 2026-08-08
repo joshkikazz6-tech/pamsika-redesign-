@@ -6,6 +6,8 @@ import { trackProductView } from '../lib/recommendationEngine';
 
 interface HomeViewProps {
   products: Product[];
+  feedProducts?: Product[];
+  onRefreshFeed?: () => void | Promise<void>;
   wishlistIds: string[];
   onToggleWishlist: (productId: string) => void;
   onAddToCart: (product: Product) => void;
@@ -18,6 +20,8 @@ interface HomeViewProps {
 
 export const HomeView: React.FC<HomeViewProps> = ({
   products,
+  feedProducts,
+  onRefreshFeed,
   wishlistIds,
   onToggleWishlist,
   onAddToCart,
@@ -30,7 +34,9 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const [selectedProductModal, setSelectedProductModal] = useState<Product | null>(null);
 
   const activeModalProduct = selectedProductModal
-    ? products.find((p) => p.id === selectedProductModal.id) || selectedProductModal
+    ? products.find((p) => p.id === selectedProductModal.id) ||
+      (feedProducts || []).find((p) => p.id === selectedProductModal.id) ||
+      selectedProductModal
     : null;
 
   const categories = [
@@ -41,11 +47,21 @@ export const HomeView: React.FC<HomeViewProps> = ({
     { name: 'Others', icon: 'more_horiz' }
   ];
 
+  // The dynamic discovery feed (personalized/trending/new/random, sourced
+  // from the backend) drives the default homepage view. An active search
+  // query still searches the full catalog, since that's an explicit user
+  // intent that should override the discovery feed. Falls back to the
+  // full catalog if the feed hasn't loaded yet, so the homepage is never
+  // empty on first paint.
+  const discoveryProducts = feedProducts && feedProducts.length > 0 ? feedProducts : products;
+
   const filteredProducts = products.filter((p) => {
     if (!searchQuery) return true;
     return p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
            p.category.toLowerCase().includes(searchQuery.toLowerCase());
   });
+
+  const displayProducts = searchQuery ? filteredProducts : discoveryProducts;
 
   const handleCopyLink = (productName: string) => {
     navigator.clipboard?.writeText(window.location.href);
@@ -185,7 +201,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProducts.map((product) => {
+          {displayProducts.map((product) => {
             const isWishlisted = wishlistIds.includes(product.id);
             return (
               <div
@@ -324,7 +340,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
       {/* Algorithmic Smart Recommendation Feed (Facebook/YouTube style personalization) */}
       <SmartRecommendationFeed
-        products={products}
+        products={discoveryProducts}
         wishlistIds={wishlistIds}
         cartProductIds={[]}
         onAddToCart={onAddToCart}
@@ -341,6 +357,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
           }
         }}
         onShowToast={(msg) => onShowToast && onShowToast(msg)}
+        onRefresh={onRefreshFeed}
       />
 
       {/* Community CTA */}

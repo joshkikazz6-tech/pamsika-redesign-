@@ -222,6 +222,30 @@ class ApiClient {
     return this.get('/products/new');
   }
 
+  // ── Discovery feed / recommendations ─────────────────────────────────────
+  getFeed(params: { page?: number; per_page?: number } = {}) {
+    const q = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null) q.set(k, String(v));
+    });
+    return this.get(`/feed?${q.toString()}`);
+  }
+  getRecentlyViewed(limit = 20) {
+    return this.get(`/feed/recently-viewed?limit=${limit}`);
+  }
+  logInteraction(
+    interactionType: 'view' | 'wishlist_add' | 'wishlist_remove' | 'cart_add' | 'purchase' | 'search' | 'category_view',
+    opts: { productId?: string; category?: string; searchQuery?: string } = {}
+  ) {
+    // Best-effort — a failed tracking call should never surface to the UI.
+    return this.post('/feed/interactions', {
+      interaction_type: interactionType,
+      product_id: opts.productId,
+      category: opts.category,
+      search_query: opts.searchQuery,
+    }).catch(() => undefined);
+  }
+
   // ── Cart (guest-friendly via X-Session-Id) ──────────────────────────────
   getCart() {
     return this.get('/cart');

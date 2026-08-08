@@ -2,6 +2,7 @@
 FastAPI dependency injection for authentication + authorization.
 """
 
+from typing import Optional
 from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -55,6 +56,28 @@ async def get_current_admin(
             detail="Admin access required",
         )
     return current_user
+
+
+async def get_current_user_optional(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    db: AsyncSession = Depends(get_db),
+) -> Optional[User]:
+    """
+    Like get_current_user, but returns None instead of raising 401 for
+    guests. Used by endpoints (e.g. the discovery feed) that behave
+    differently for logged-in vs anonymous visitors but never require auth.
+    """
+    if not credentials:
+        return None
+    payload = decode_token(credentials.credentials)
+    if not payload or payload.get("type") != "access":
+        return None
+    result = await db.execute(
+        select(User).where(User.id == payload.get("sub"), User.deleted_at.is_(None))
+    )
+    user = result.scalar_one_or_none()
+    return user if (user and user.is_active) else None
 
 
 async def get_current_affiliate(

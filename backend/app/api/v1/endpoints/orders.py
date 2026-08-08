@@ -18,6 +18,7 @@ from app.models.messages import Conversation, Message
 from app.schemas.common import OrderCreate, OrderOut
 from app.api.deps import get_current_user
 from app.services.audit import log_action
+from app.services.recommendations import record_interaction
 from app.core.encryption import encrypt_data
 
 router = APIRouter(prefix="/orders", tags=["orders"])
@@ -129,6 +130,10 @@ async def create_order(
             affiliate_id=ref,
         )
         db.add(order_item)
+        await record_interaction(
+            db, current_user.id, "purchase",
+            product_id=item.product_id, category=item.product.category,
+        )
 
     for item in list(cart.items):
         await db.delete(item)
@@ -252,6 +257,11 @@ async def create_direct_order(
             affiliate_id=ref,
         )
         db.add(order_item)
+        if current_user:
+            await record_interaction(
+                db, current_user.id, "purchase",
+                product_id=product.id, category=product.category,
+            )
 
     await db.flush()
 

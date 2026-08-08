@@ -19,7 +19,7 @@ import { Toast } from './components/Toast';
 import { AuthModal } from './components/AuthModal';
 import { useAuth } from './context/AuthContext';
 import { Api, ApiError } from './lib/api';
-import { trackProductView } from './lib/recommendationEngine';
+import { trackProductView, trackSearchQuery } from './lib/recommendationEngine';
 import {
   adaptProducts,
   adaptCart,
@@ -86,6 +86,7 @@ export default function App() {
 
   // Core Dynamic Data State — populated from the backend, not mock files
   const [products, setProducts] = useState<Product[]>([]);
+  const [feedProducts, setFeedProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [wishlistIds, setWishlistIds] = useState<string[]>([]);
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
@@ -133,6 +134,15 @@ export default function App() {
       setProducts(adaptProducts(res.items || []));
     } catch (err) {
       console.error('Failed to load products', err);
+    }
+  }, []);
+
+  const loadFeed = useCallback(async () => {
+    try {
+      const res = await Api.getFeed({ per_page: 24 });
+      setFeedProducts(adaptProducts(res.items || []));
+    } catch (err) {
+      console.error('Failed to load discovery feed', err);
     }
   }, []);
 
@@ -334,6 +344,13 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Discovery feed — personalized when logged in, trending/new/random for
+  // guests. Reloads on login/logout so the feed switches from guest mode
+  // to personalized mode (and back) automatically.
+  useEffect(() => {
+    loadFeed();
+  }, [user, loadFeed]);
+
   // Cart works for guests too (session-based) — reload whenever auth changes
   // so a guest cart merges/refreshes correctly after login.
   useEffect(() => {
@@ -367,6 +384,16 @@ export default function App() {
       setDoloData(EMPTY_DOLO);
     }
   }, [user, loadDoloData]);
+
+  // Debounced search-interaction logging — feeds the backend preference
+  // engine without firing a request on every keystroke.
+  useEffect(() => {
+    if (!user || !searchQuery || searchQuery.trim().length < 2) return;
+    const timer = setTimeout(() => {
+      trackSearchQuery(searchQuery);
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [searchQuery, user]);
 
   useEffect(() => {
     if (user?.is_admin) {
@@ -891,6 +918,8 @@ export default function App() {
         {currentView === 'home' && (
           <HomeView
             products={products}
+            feedProducts={feedProducts}
+            onRefreshFeed={loadFeed}
             wishlistIds={wishlistIds}
             onToggleWishlist={handleToggleWishlist}
             onAddToCart={handleAddToCart}

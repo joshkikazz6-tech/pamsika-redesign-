@@ -9,5 +9,6 @@ from app.models.affiliate import AffiliateClick, AffiliateWithdrawal       # noq
 from app.models.audit import AuditLog                                       # noqa
 from app.models.community import CommunityPost, CommunityComment, PostLike  # noqa
 from app.models.messages import Conversation, Message                       # noqa
+from app.models.interaction import UserInteraction                          # noqa
 from app.api.v1.endpoints.reviews import Review                             # noqa
 from app.api.v1.endpoints.promo import PromoCode                            # noqa

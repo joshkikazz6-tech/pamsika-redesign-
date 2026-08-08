@@ -13,6 +13,7 @@ from app.models.product import Product
 from app.models.user import User
 from app.schemas.common import FavoriteOut
 from app.api.deps import get_current_user
+from app.services.recommendations import record_interaction
 
 router = APIRouter(prefix="/favorites", tags=["favorites"])
 
@@ -35,7 +36,8 @@ async def add_favorite(
     current_user: User = Depends(get_current_user),
 ):
     prod = await db.execute(select(Product).where(Product.id == product_id, Product.is_active == True))
-    if not prod.scalar_one_or_none():
+    product = prod.scalar_one_or_none()
+    if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
     fav = Favorite(user_id=current_user.id, product_id=product_id)
@@ -45,6 +47,10 @@ async def add_favorite(
     except IntegrityError:
         await db.rollback()
         raise HTTPException(status_code=409, detail="Already in favorites")
+
+    await record_interaction(
+        db, current_user.id, "wishlist_add", product_id=product.id, category=product.category
+    )
     return {"detail": "Added to favorites"}
 
 
@@ -64,4 +70,6 @@ async def remove_favorite(
     if not fav:
         raise HTTPException(status_code=404, detail="Favorite not found")
     await db.delete(fav)
+
+    await record_interaction(db, current_user.id, "wishlist_remove", product_id=product_id)
     return {"detail": "Removed from favorites"}
