@@ -6,7 +6,7 @@ interface DownloadAppViewProps {
 }
 
 const APK_URL =
-  'https://github.com/joshkikazz6-tech/nEW-pA-mSiKA/releases/download/v1.0.0/Pa_MsIkA.apk';
+  'https://github.com/joshkikazz6-tech/nEW-pA-mSiKA/releases/download/latest/pamsika.apk';
 
 const INSTALL_STEPS = [
   {
