@@ -84,6 +84,26 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <p className="text-xs text-[#4B5563]">{user?.email || ''}</p>
       </div>
 
+      {/* Mobile App Download */}
+      <section>
+        <h3 className="text-xs font-bold text-[#6D28D9] uppercase tracking-[0.2em] mb-2 px-1">
+          Get The App
+        </h3>
+        <button
+          onClick={() => onNavigate('download-app')}
+          className="w-full flex items-center gap-3 p-4 bg-[#6D28D9] hover:bg-[#5b21b6] active:scale-[0.98] transition-all duration-150 text-left rounded-2xl shadow-md shadow-[#6D28D9]/20"
+        >
+          <div className="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center text-white shrink-0">
+            <span className="material-symbols-outlined">android</span>
+          </div>
+          <div className="flex-1">
+            <p className="font-bold text-sm text-white">Download Mobile App</p>
+            <p className="text-[11px] text-white/80">Get the Pa_mSikA Android app (APK)</p>
+          </div>
+          <span className="material-symbols-outlined text-white/80 text-[20px]">chevron_right</span>
+        </button>
+      </section>
+
       {/* Portal Shortcuts */}
       <section>
         <h3 className="text-xs font-bold text-[#6D28D9] uppercase tracking-[0.2em] mb-2 px-1">

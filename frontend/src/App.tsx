@@ -12,6 +12,7 @@ import { DoloView } from './components/DoloView';
 import { SellerHubView } from './components/SellerHubView';
 import { AdminView } from './components/AdminView';
 import { SettingsView } from './components/SettingsView';
+import { DownloadAppView } from './components/DownloadAppView';
 import { OrderMethodsModal } from './components/OrderMethodsModal';
 import { ProductDetailModal } from './components/ProductDetailModal';
 import { Toast } from './components/Toast';
@@ -1044,6 +1045,10 @@ export default function App() {
             isDarkMode={isDarkMode}
             onToggleDarkMode={handleToggleDarkMode}
           />
+        )}
+
+        {currentView === 'download-app' && (
+          <DownloadAppView onBack={() => handleNavigate('settings')} onShowToast={showToast} />
         )}
       </main>
 
